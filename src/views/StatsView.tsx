@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import clsx from 'clsx'
 import { Button } from '../components/ui/Button'
+import { basicStrokes } from '../data/curriculum'
+import { rootId } from '../lib/items'
 import type { ProgressState, SessionRecord, TrainingRequest } from '../types'
 
 type Range = 7 | 30 | 'all'
@@ -103,7 +105,18 @@ export function StatsView({ progress, onStart }: StatsViewProps) {
           <div>
             <h2 className="text-xl font-semibold text-zinc-950 dark:text-white">还没有训练记录</h2>
             <p className="mx-auto mt-2 max-w-[48ch] text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-400">完成第一轮练习后，这里才会显示真实数据。</p>
-            <Button variant="primary" className="mt-5" onClick={() => onStart({ kind: 'formula', title: '取码公式', stageId: 'formula' })}>开始第一课</Button>
+            <Button
+              variant="primary"
+              className="mt-5"
+              onClick={() => onStart({
+                kind: 'roots',
+                title: '第 1 课 · 五个基本笔画',
+                stageId: 'strokes',
+                itemIds: basicStrokes.map((stroke) => rootId(stroke.entry)),
+              })}
+            >
+              开始第一课
+            </Button>
           </div>
         </section>
       )}

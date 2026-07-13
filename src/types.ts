@@ -82,8 +82,10 @@ export interface AppSettings {
 }
 
 export interface ProgressState {
-  version: 1
+  version: 2
   createdAt: number
+  onboardingComplete: boolean
+  learned: Record<string, number>
   mastery: Record<string, MasteryRecord>
   sessions: SessionRecord[]
   settings: AppSettings

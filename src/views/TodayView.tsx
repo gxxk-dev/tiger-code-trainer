@@ -2,13 +2,14 @@ import { ArrowRight, BookOpen, Keyboard, Play, RotateCcw } from 'lucide-react'
 import { KeyboardMap } from '../components/KeyboardMap'
 import { Button } from '../components/ui/Button'
 import { ProgressBar } from '../components/ui/ProgressBar'
-import { courseStages, orderedRoots } from '../data/curriculum'
+import { basicStrokes, courseStages, orderedRoots, splitExamples } from '../data/curriculum'
 import {
   countMastered,
   dueItemIds,
   newCharacterIds,
   newRootIds,
   rootId,
+  splitId,
 } from '../lib/items'
 import type { ProgressState, TrainingRequest } from '../types'
 
@@ -16,24 +17,60 @@ interface TodayViewProps {
   progress: ProgressState
   onStart: (request: TrainingRequest) => void
   onOpenCourse: () => void
+  onSkipOnboarding: () => void
 }
 
-export function TodayView({ progress, onStart, onOpenCourse }: TodayViewProps) {
+export function TodayView({ progress, onStart, onOpenCourse, onSkipOnboarding }: TodayViewProps) {
+  const starterRequest: TrainingRequest = {
+    kind: 'roots',
+    title: '第 1 课 · 五个基本笔画',
+    stageId: 'strokes',
+    itemIds: basicStrokes.map((stroke) => rootId(stroke.entry)),
+  }
+
+  if (!progress.onboardingComplete) {
+    return (
+      <FirstLessonView
+        onStart={() => onStart(starterRequest)}
+        onSkip={onSkipOnboarding}
+      />
+    )
+  }
+
   const dueIds = dueItemIds(progress)
   const newRoots = newRootIds(progress, progress.settings.newItemsPerRound)
   const rootMastered = countMastered(progress, 'root:')
   const firstMastered = countMastered(progress, 'char:')
   const splitMastered = countMastered(progress, 'split:')
   const bestSpeed = Math.max(0, ...progress.sessions.map((session) => session.charsPerMinute ?? 0))
-  const currentStage = rootMastered < 5
-    ? courseStages[0]
+  const formulaComplete = progress.sessions.some((session) => session.stageId === 'formula')
+  const shortcutsStarted = progress.sessions.some((session) => session.stageId === 'shortcuts')
+  const phrasesStarted = progress.sessions.some((session) => session.stageId === 'phrases')
+  const currentStage = !formulaComplete
+    ? courseStages[1]
     : rootMastered < orderedRoots.length
       ? courseStages[2]
+      : splitMastered < 632
+        ? courseStages[3]
       : firstMastered < 500
         ? courseStages[4]
-        : courseStages[6]
+        : !shortcutsStarted
+          ? courseStages[5]
+          : !phrasesStarted
+            ? courseStages[6]
+            : firstMastered < 1500
+              ? courseStages[7]
+              : courseStages[8]
+
+  const warmupIds = dueIds.length > 0
+    ? dueIds.slice(0, 12)
+    : Object.keys(progress.mastery).filter((id) => !id.startsWith('formula:')).slice(0, 5)
 
   const startToday = () => {
+    if (!formulaComplete) {
+      onStart({ kind: 'formula', title: courseStages[1].title, stageId: 'formula' })
+      return
+    }
     if (dueIds.length > 0) {
       onStart({ kind: 'review', title: '到期复习', itemIds: dueIds.slice(0, 12) })
       return
@@ -63,7 +100,7 @@ export function TodayView({ progress, onStart, onOpenCourse }: TodayViewProps) {
         <div className="min-w-0">
           <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">今日 · {progress.settings.dailyMinutes} 分钟</p>
           <h1 className="mt-2 max-w-[20ch] text-3xl font-semibold text-balance text-zinc-950 sm:text-4xl dark:text-white">
-            {dueIds.length > 0 ? `先复习 ${dueIds.length} 个到期内容` : '学一点，马上拿来打字'}
+            {!formulaComplete ? '下一步只学一条取码公式' : dueIds.length > 0 ? `先复习 ${dueIds.length} 个到期内容` : '学一点，马上拿来打字'}
           </h1>
           <p className="mt-3 max-w-[56ch] text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-400">
             当前：{currentStage.title}。本轮会混合旧内容、新内容和真实汉字。
@@ -75,7 +112,7 @@ export function TodayView({ progress, onStart, onOpenCourse }: TodayViewProps) {
           leadingIcon={<Play className="size-4 fill-current" aria-hidden="true" />}
           onClick={startToday}
         >
-          开始今日训练
+          {!formulaComplete ? '学习取码公式' : '开始今日训练'}
         </Button>
       </header>
 
@@ -106,25 +143,29 @@ export function TodayView({ progress, onStart, onOpenCourse }: TodayViewProps) {
               detail={dueIds.length ? `${dueIds.length} 个到期项目` : '5 个已学内容'}
               minutes={3}
               icon={<RotateCcw className="size-4" aria-hidden="true" />}
-              onClick={() => onStart({ kind: 'review', title: '快速复习', itemIds: dueIds.slice(0, 12) })}
+              onClick={() => onStart({ kind: 'review', title: '快速复习', itemIds: warmupIds })}
             />
             <PlanItem
               index="02"
-              title={newRoots.length ? '新字根微包' : '常用字全码'}
-              detail={newRoots.length ? `${newRoots.length} 个新字根` : '12 个高频字'}
+              title={!formulaComplete ? '一条取码公式' : newRoots.length ? '新字根微包' : '常用字全码'}
+              detail={!formulaComplete ? '先看规则，再做 5 个例子' : newRoots.length ? `${newRoots.length} 个新字根` : '12 个高频字'}
               minutes={4}
               icon={<BookOpen className="size-4" aria-hidden="true" />}
-              onClick={() => onStart(newRoots.length
-                ? { kind: 'roots', title: '新字根微包', itemIds: newRoots }
-                : { kind: 'characters', title: '常用字全码', itemIds: newCharacterIds(progress, 12, 1) })}
+              onClick={() => onStart(!formulaComplete
+                ? { kind: 'formula', title: courseStages[1].title, stageId: 'formula' }
+                : newRoots.length
+                  ? { kind: 'roots', title: '新字根微包', stageId: 'roots', itemIds: newRoots }
+                  : { kind: 'characters', title: '常用字全码', stageId: 'first-500', itemIds: newCharacterIds(progress, 12, 1) })}
             />
             <PlanItem
               index="03"
-              title="真实中文短句"
-              detail="使用 Fcitx5 虎码输入"
+              title={firstMastered > 0 ? '真实中文短句' : '第一个拆分示范'}
+              detail={firstMastered > 0 ? '使用 Fcitx5 虎码输入' : '先看答案，再选字根'}
               minutes={3}
               icon={<Keyboard className="size-4" aria-hidden="true" />}
-              onClick={() => onStart({ kind: 'article', title: '真实中文短句', articleId: 'message' })}
+              onClick={() => onStart(firstMastered > 0
+                ? { kind: 'article', title: '真实中文短句', stageId: 'phrases', articleId: 'message' }
+                : { kind: 'splits', title: '第一个拆分示范', stageId: 'splits', itemIds: splitExamples.slice(0, 5).map(splitId) })}
             />
           </ol>
         </section>
@@ -155,6 +196,69 @@ export function TodayView({ progress, onStart, onOpenCourse }: TodayViewProps) {
         <Button onClick={onOpenCourse}>查看阶段</Button>
       </section>
     </div>
+  )
+}
+
+function FirstLessonView({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
+  return (
+    <div className="mx-auto grid max-w-6xl gap-10 px-4 pt-8 pb-28 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+      <header className="grid gap-6 border-b border-zinc-950/8 pb-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-end dark:border-white/8">
+        <div className="min-w-0">
+          <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">从零开始 · 第 1 课 · 约 3 分钟</p>
+          <h1 className="mt-2 max-w-[18ch] text-3xl font-semibold text-balance text-zinc-950 sm:text-4xl dark:text-white">先看答案，不会也能开始</h1>
+          <div className="mt-4 grid max-w-[58ch] gap-1 text-base text-pretty text-zinc-600 dark:text-zinc-300">
+            <p>汉字会拆成字根。</p>
+            <p>每个字根固定对应两个字母：第一个叫大码，第二个叫小码。</p>
+            <p>实际输入全部使用小写，不需要按 Shift。</p>
+          </div>
+        </div>
+        <Button variant="primary" size="default" leadingIcon={<Play className="size-4 fill-current" aria-hidden="true" />} onClick={onStart}>
+          开始第 1 课
+        </Button>
+      </header>
+
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <section aria-labelledby="memory-title">
+          <p className="font-mono text-sm font-medium text-blue-700 dark:text-blue-300">唯一需要背的内容</p>
+          <h2 id="memory-title" className="mt-2 text-xl font-semibold text-zinc-950 dark:text-white">这一课只记 5 个基本笔画</h2>
+          <ul role="list" className="mt-5 divide-y divide-zinc-950/8 border-y border-zinc-950/8 dark:divide-white/8 dark:border-white/8">
+            {basicStrokes.map((stroke) => (
+              <li key={stroke.code} className="grid grid-cols-[3rem_4rem_1fr] items-center gap-4 py-4">
+                <span className="text-base font-medium text-zinc-700 dark:text-zinc-200">{stroke.name}</span>
+                <span className="font-root text-3xl font-medium text-zinc-950 dark:text-white">{stroke.glyph}</span>
+                <span className="font-mono text-2xl font-semibold text-brand-700 dark:text-brand-300">{stroke.code}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-base font-medium text-zinc-700 dark:text-zinc-200">横 fi，竖 gs，撇 tp，点 id，折 ae。</p>
+        </section>
+
+        <aside aria-labelledby="lesson-steps-title" className="border-t border-zinc-950/8 pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-7 dark:border-white/8">
+          <h2 id="lesson-steps-title" className="font-semibold text-zinc-950 dark:text-white">接下来只做三步</h2>
+          <ol className="mt-4 grid gap-5">
+            <FirstLessonStep index="01" title="看答案" detail="先把上面五组看一遍" />
+            <FirstLessonStep index="02" title="照着打" detail="答案保持显示，不计分" />
+            <FirstLessonStep index="03" title="自己回忆" detail="最后才遮住答案练习" />
+          </ol>
+          <div className="mt-7 border-t border-zinc-950/8 pt-5 dark:border-white/8">
+            <p className="text-base text-zinc-500 sm:text-sm dark:text-zinc-400">现在不用管：完整字根表、拆字规则、简码和速度。</p>
+            <Button variant="ghost" size="compact" className="mt-3" trailingIcon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={onSkip}>我已经学过</Button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  )
+}
+
+function FirstLessonStep({ index, title, detail }: { index: string; title: string; detail: string }) {
+  return (
+    <li className="grid grid-cols-[2rem_1fr] gap-3">
+      <span className="font-mono text-sm text-zinc-500 tabular-nums dark:text-zinc-400">{index}</span>
+      <span>
+        <span className="block text-base font-medium text-zinc-950 sm:text-sm dark:text-white">{title}</span>
+        <span className="mt-1 block text-base text-zinc-500 sm:text-sm dark:text-zinc-400">{detail}</span>
+      </span>
+    </li>
   )
 }
 

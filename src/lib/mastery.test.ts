@@ -14,6 +14,7 @@ describe('mastery model', () => {
     const second = updateMastery(first, true, 900, false, start + 1000)
 
     expect(first.level).toBe(0)
+    expect(first.dueAt).toBeGreaterThan(start)
     expect(second.level).toBe(1)
     expect(second.streak).toBe(2)
     expect(second.dueAt).toBeGreaterThan(start + 1000)

@@ -17,6 +17,20 @@ export const orderedRoots = [...roots].sort((left, right) => {
   return left.code.localeCompare(right.code)
 })
 
+const basicStrokeSpecs = [
+  { name: '横', glyph: '一', code: 'fi' },
+  { name: '竖', glyph: '丨', code: 'gs' },
+  { name: '撇', glyph: '丿', code: 'tp' },
+  { name: '点', glyph: '丶', code: 'id' },
+  { name: '折', glyph: '㇆', code: 'ae' },
+]
+
+export const basicStrokes = basicStrokeSpecs.map((stroke) => {
+  const entry = orderedRoots.find((root) => root.root === stroke.glyph && root.code === stroke.code)
+  if (!entry) throw new Error(`Missing basic stroke ${stroke.name}`)
+  return { ...stroke, entry }
+})
+
 export const rootPacks = Array.from({ length: Math.ceil(orderedRoots.length / 15) }, (_, index) => ({
   id: `roots-${index + 1}`,
   title: index === 0 ? '起步字根' : `字根微包 ${String(index + 1).padStart(2, '0')}`,

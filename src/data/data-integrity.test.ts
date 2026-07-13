@@ -3,6 +3,7 @@ import { characters } from './characters.generated'
 import { lookupCharacters } from './lookup.generated'
 import { roots } from './roots.generated'
 import { requiredSplits } from './splits.generated'
+import { basicStrokes } from './curriculum'
 
 describe('generated Tiger Code data', () => {
   it('contains the official learning sets without duplicate identities', () => {
@@ -21,5 +22,15 @@ describe('generated Tiger Code data', () => {
 
     const hua = lookupCharacters.find((entry) => entry.char === '华')
     expect(hua).toMatchObject({ code: 'jvns', rootCodes: ['Jr', 'Vb', 'Ns'] })
+  })
+
+  it('uses the exact five basic strokes in the first lesson', () => {
+    expect(basicStrokes.map(({ name, glyph, code }) => [name, glyph, code])).toEqual([
+      ['横', '一', 'fi'],
+      ['竖', '丨', 'gs'],
+      ['撇', '丿', 'tp'],
+      ['点', '丶', 'id'],
+      ['折', '㇆', 'ae'],
+    ])
   })
 })

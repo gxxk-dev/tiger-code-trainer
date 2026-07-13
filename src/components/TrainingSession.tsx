@@ -1,11 +1,13 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Pause, X } from 'lucide-react'
 import { median } from '../lib/mastery'
+import { shouldShowLesson } from '../lib/lessons'
 import type { ProgressState, SessionRecord, TrainingRequest } from '../types'
 import { ArticleTrainer } from './training/ArticleTrainer'
 import { CodeTrainer } from './training/CodeTrainer'
 import { CompletionView } from './training/CompletionView'
 import { FormulaTrainer } from './training/FormulaTrainer'
+import { LessonPrimer } from './training/LessonPrimer'
 import { SplitTrainer } from './training/SplitTrainer'
 import type { SessionResult, TrainingAnswerHandler } from './training/types'
 import { Button, IconButton } from './ui/Button'
@@ -14,6 +16,7 @@ interface TrainingSessionProps {
   request: TrainingRequest
   progress: ProgressState
   onAnswer: TrainingAnswerHandler
+  onLearned: (itemIds: string[]) => void
   onComplete: (record: SessionRecord) => void
   onClose: () => void
 }
@@ -22,12 +25,22 @@ export function TrainingSession({
   request,
   progress,
   onAnswer,
+  onLearned,
   onComplete,
   onClose,
 }: TrainingSessionProps) {
   const [result, setResult] = useState<SessionResult | null>(null)
   const [paused, setPaused] = useState(false)
+  const [learning, setLearning] = useState(() => shouldShowLesson(request, progress))
   const sessionStartedAt = useRef(Date.now())
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !event.isComposing && !event.defaultPrevented) onClose()
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [onClose])
 
   const finish = (summary: SessionResult) => {
     const record: SessionRecord = {
@@ -48,18 +61,24 @@ export function TrainingSession({
 
   const elapsed = () => Math.max(1, Math.round((Date.now() - sessionStartedAt.current) / 1000))
 
+  const beginPractice = (itemIds: string[]) => {
+    onLearned(itemIds)
+    sessionStartedAt.current = Date.now()
+    setLearning(false)
+  }
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-canvas text-zinc-950 dark:bg-canvas-dark dark:text-zinc-100">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-canvas text-zinc-950 dark:bg-canvas-dark dark:text-zinc-100" role="dialog" aria-modal="true" aria-labelledby="training-title">
       <header className="sticky top-0 z-20 border-b border-zinc-950/8 bg-canvas/92 backdrop-blur dark:border-white/8 dark:bg-canvas-dark/92">
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4 sm:px-6 lg:px-8">
           <IconButton label="退出训练" onClick={onClose}>
             <X className="size-4" aria-hidden="true" />
           </IconButton>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-medium text-zinc-950 sm:text-sm dark:text-white">{request.title}</p>
-            <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">{modeLabel(request.kind)}</p>
+            <p id="training-title" className="truncate text-base font-medium text-zinc-950 sm:text-sm dark:text-white">{request.title}</p>
+            <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">{learning ? '先学 · 答案可见' : modeLabel(request.kind)}</p>
           </div>
-          {!result ? (
+          {!result && !learning ? (
             <IconButton label={paused ? '继续训练' : '暂停训练'} onClick={() => setPaused((value) => !value)}>
               {paused ? <ArrowRight className="size-4" aria-hidden="true" /> : <Pause className="size-4" aria-hidden="true" />}
             </IconButton>
@@ -67,7 +86,9 @@ export function TrainingSession({
         </div>
       </header>
 
-      {paused ? (
+      {learning ? (
+        <LessonPrimer request={request} progress={progress} onComplete={beginPractice} />
+      ) : paused ? (
         <div className="grid min-h-[calc(100dvh-4rem)] place-items-center px-4">
           <div className="text-center">
             <Pause className="mx-auto size-8 text-zinc-500" aria-hidden="true" />
@@ -80,7 +101,7 @@ export function TrainingSession({
       ) : request.kind === 'article' ? (
         <ArticleTrainer request={request} onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} />
       ) : request.kind === 'formula' ? (
-        <FormulaTrainer onAnswer={onAnswer} onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} />
+        <FormulaTrainer onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} />
       ) : request.kind === 'splits' ? (
         <SplitTrainer request={request} onAnswer={onAnswer} onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} />
       ) : (

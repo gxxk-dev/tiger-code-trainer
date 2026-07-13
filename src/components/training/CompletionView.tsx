@@ -14,6 +14,11 @@ interface CompletionViewProps {
 
 export function CompletionView({ request, result, onClose, className }: CompletionViewProps) {
   const accuracy = Math.round(result.correct / Math.max(1, result.attempted) * 100)
+  const nextStep = request.stageId === 'strokes'
+    ? '下一步：学习一条取码公式。'
+    : request.stageId === 'formula'
+      ? '下一步：每次认识 5 个常用字根。'
+      : ''
   return (
     <main className={clsx('mx-auto grid min-h-[calc(100dvh-4rem)] max-w-3xl content-center gap-8 px-4 py-10 text-center sm:px-6 lg:px-8', className)}>
       <div>
@@ -22,6 +27,7 @@ export function CompletionView({ request, result, onClose, className }: Completi
         </span>
         <h1 className="mt-5 text-3xl font-semibold text-zinc-950 dark:text-white">本轮完成</h1>
         <p className="mt-2 text-base text-zinc-600 sm:text-sm dark:text-zinc-400">{request.title}</p>
+        {nextStep ? <p className="mt-2 text-base font-medium text-brand-700 sm:text-sm dark:text-brand-300">{nextStep}</p> : null}
       </div>
       <dl className="grid grid-cols-2 divide-x divide-zinc-950/8 border-y border-zinc-950/8 py-5 sm:grid-cols-4 dark:divide-white/8 dark:border-white/8">
         <ResultStat label="准确率" value={`${accuracy}%`} />
@@ -30,7 +36,7 @@ export function CompletionView({ request, result, onClose, className }: Completi
         <ResultStat label={result.charsPerMinute ? '字 / 分' : '中位反应'} value={result.charsPerMinute ? `${result.charsPerMinute}` : result.responseTimes.length ? `${(median(result.responseTimes) / 1000).toFixed(1)}s` : '—'} />
       </dl>
       <div className="flex justify-center">
-        <Button variant="primary" onClick={onClose}>返回学习页</Button>
+        <Button variant="primary" onClick={onClose}>{nextStep ? '继续下一步' : '返回学习页'}</Button>
       </div>
     </main>
   )

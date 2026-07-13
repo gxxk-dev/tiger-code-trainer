@@ -38,8 +38,27 @@ export function useProgress() {
   const completeSession = useCallback((session: SessionRecord) => {
     setProgress((current) => ({
       ...current,
+      onboardingComplete: current.onboardingComplete || session.stageId === 'strokes',
       sessions: [...current.sessions, session].slice(-500),
     }))
+  }, [])
+
+  const skipOnboarding = useCallback(() => {
+    setProgress((current) => ({ ...current, onboardingComplete: true }))
+  }, [])
+
+  const markLearned = useCallback((itemIds: string[]) => {
+    if (!itemIds.length) return
+    setProgress((current) => {
+      const learnedAt = Date.now()
+      return {
+        ...current,
+        learned: {
+          ...current.learned,
+          ...Object.fromEntries(itemIds.map((id) => [id, learnedAt])),
+        },
+      }
+    })
   }, [])
 
   const updateSettings = useCallback((settings: Partial<AppSettings>) => {
@@ -68,7 +87,9 @@ export function useProgress() {
   return {
     progress,
     recordAnswer,
+    markLearned,
     completeSession,
+    skipOnboarding,
     updateSettings,
     resetProgress,
     restoreProgress,

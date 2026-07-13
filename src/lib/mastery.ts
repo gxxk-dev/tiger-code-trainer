@@ -1,6 +1,6 @@
 import type { MasteryRecord } from '../types'
 
-const REVIEW_INTERVALS = [0, 10 * 60_000, 24 * 60 * 60_000, 3 * 24 * 60 * 60_000, 7 * 24 * 60 * 60_000, 21 * 24 * 60 * 60_000]
+const REVIEW_INTERVALS = [10 * 60_000, 24 * 60 * 60_000, 3 * 24 * 60 * 60_000, 7 * 24 * 60 * 60_000, 21 * 24 * 60 * 60_000, 60 * 24 * 60 * 60_000]
 
 export function createMasteryRecord(now = Date.now()): MasteryRecord {
   return {
@@ -40,7 +40,7 @@ export function updateMastery(
     lapses: base.lapses + (recalled ? 0 : 1),
     averageMs: weightedAverage,
     lastSeenAt: now,
-    dueAt: now + REVIEW_INTERVALS[nextLevel],
+    dueAt: recalled ? now + REVIEW_INTERVALS[nextLevel] : now,
   }
 }
 

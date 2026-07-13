@@ -252,6 +252,8 @@ function buildCodeQuestions(request: TrainingRequest, progress: ProgressState): 
     }))
   }
 
+  if (request.kind === 'review' && itemIds.length === 0) return []
+
   const resolved = itemIds.length
     ? itemIds.flatMap((id) => {
       const root = resolveRoot(id)

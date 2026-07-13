@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { AppShell } from './components/AppShell'
 import { SettingsPanel } from './components/SettingsPanel'
 import { useProgress } from './hooks/useProgress'
@@ -17,7 +17,9 @@ function App() {
   const {
     progress,
     recordAnswer,
+    markLearned,
     completeSession,
+    skipOnboarding,
     updateSettings,
     resetProgress,
     restoreProgress,
@@ -25,6 +27,7 @@ function App() {
   const [activeView, setActiveView] = useState<ViewId>('today')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [training, setTraining] = useState<TrainingRequest | null>(null)
+  const trainingTriggerRef = useRef<HTMLElement | null>(null)
 
   useTheme(progress.settings.theme)
 
@@ -35,14 +38,30 @@ function App() {
     )
   }, [progress.settings.reducedMotion])
 
+  const startTraining = useCallback((request: TrainingRequest) => {
+    trainingTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setTraining(request)
+  }, [])
+
+  const closeTraining = useCallback(() => {
+    setTraining(null)
+    window.setTimeout(() => {
+      if (trainingTriggerRef.current?.isConnected) {
+        trainingTriggerRef.current.focus()
+        return
+      }
+      document.querySelector<HTMLElement>('main button:not(:disabled), main a[href]')?.focus()
+    }, 0)
+  }, [])
+
   const view = (() => {
     switch (activeView) {
       case 'course':
-        return <CourseView progress={progress} onStart={setTraining} />
+        return <CourseView progress={progress} onStart={startTraining} />
       case 'review':
-        return <ReviewView progress={progress} onStart={setTraining} />
+        return <ReviewView progress={progress} onStart={startTraining} />
       case 'stats':
-        return <StatsView progress={progress} onStart={setTraining} />
+        return <StatsView progress={progress} onStart={startTraining} />
       case 'lookup':
         return <LookupView />
       case 'today':
@@ -50,8 +69,12 @@ function App() {
         return (
           <TodayView
             progress={progress}
-            onStart={setTraining}
+            onStart={startTraining}
             onOpenCourse={() => setActiveView('course')}
+            onSkipOnboarding={() => {
+              skipOnboarding()
+              setActiveView('course')
+            }}
           />
         )
     }
@@ -59,23 +82,25 @@ function App() {
 
   return (
     <>
-      <AppShell
-        activeView={activeView}
-        onViewChange={setActiveView}
-        onOpenSettings={() => setSettingsOpen(true)}
-        dueCount={dueItemIds(progress).length}
-      >
-        <Suspense fallback={<ViewLoading />}>{view}</Suspense>
-      </AppShell>
+      <div inert={training ? true : undefined} aria-hidden={training ? true : undefined}>
+        <AppShell
+          activeView={activeView}
+          onViewChange={setActiveView}
+          onOpenSettings={() => setSettingsOpen(true)}
+          dueCount={dueItemIds(progress).length}
+        >
+          <Suspense fallback={<ViewLoading />}>{view}</Suspense>
+        </AppShell>
 
-      <SettingsPanel
-        open={settingsOpen}
-        progress={progress}
-        onClose={() => setSettingsOpen(false)}
-        onUpdate={updateSettings}
-        onReset={resetProgress}
-        onRestore={restoreProgress}
-      />
+        <SettingsPanel
+          open={settingsOpen}
+          progress={progress}
+          onClose={() => setSettingsOpen(false)}
+          onUpdate={updateSettings}
+          onReset={resetProgress}
+          onRestore={restoreProgress}
+        />
+      </div>
 
       {training ? (
         <Suspense fallback={<SessionLoading />}>
@@ -84,8 +109,9 @@ function App() {
             request={training}
             progress={progress}
             onAnswer={recordAnswer}
+            onLearned={markLearned}
             onComplete={completeSession}
-            onClose={() => setTraining(null)}
+            onClose={closeTraining}
           />
         </Suspense>
       ) : null}

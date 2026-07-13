@@ -3,15 +3,14 @@ import { ArrowRight } from 'lucide-react'
 import clsx from 'clsx'
 import { Button } from '../ui/Button'
 import { ProgressBar } from '../ui/ProgressBar'
-import type { TrainingAnswerHandler, TrainingFinishedHandler } from './types'
+import type { TrainingFinishedHandler } from './types'
 
 interface FormulaTrainerProps {
-  onAnswer: TrainingAnswerHandler
   onFinished: TrainingFinishedHandler
   className?: string
 }
 
-export function FormulaTrainer({ onAnswer, onFinished, className }: FormulaTrainerProps) {
+export function FormulaTrainer({ onFinished, className }: FormulaTrainerProps) {
   const questions = [
     { count: 1, answer: 'Aa', roots: ['A'] },
     { count: 2, answer: 'ABb', roots: ['A', 'B'] },
@@ -36,7 +35,6 @@ export function FormulaTrainer({ onAnswer, onFinished, className }: FormulaTrain
     setAttempted((value) => value + 1)
     if (isCorrect) setCorrect((value) => value + 1)
     setResponseTimes((values) => [...values, responseMs])
-    onAnswer(`formula:${question.count}`, isCorrect, responseMs, false)
   }
 
   const next = () => {

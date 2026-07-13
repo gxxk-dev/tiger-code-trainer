@@ -17,20 +17,24 @@ export function splitId(split: SplitEntry): string {
 
 export function dueItemIds(progress: ProgressState, now = Date.now()): string[] {
   return Object.entries(progress.mastery)
-    .filter(([, record]) => record.attempts > 0 && record.dueAt <= now)
+    .filter(([id, record]) => isReviewableId(id) && record.attempts > 0 && record.dueAt <= now)
     .sort(([, left], [, right]) => left.dueAt - right.dueAt)
     .map(([id]) => id)
 }
 
 export function weakItemIds(progress: ProgressState): string[] {
   return Object.entries(progress.mastery)
-    .filter(([, record]) => record.attempts >= 2 && record.lapses > 0)
+    .filter(([id, record]) => isReviewableId(id) && record.attempts >= 2 && record.lapses > 0)
     .sort(([, left], [, right]) => {
       const leftAccuracy = left.correct / left.attempts
       const rightAccuracy = right.correct / right.attempts
       return leftAccuracy - rightAccuracy || right.lapses - left.lapses
     })
     .map(([id]) => id)
+}
+
+function isReviewableId(id: string): boolean {
+  return id.startsWith('root:') || id.startsWith('char:') || id.startsWith('split:')
 }
 
 export function newRootIds(progress: ProgressState, count: number): string[] {
