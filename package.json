@@ -2,6 +2,17 @@
   "name": "tiger-flow",
   "private": true,
   "version": "0.1.0",
+  "description": "覆盖虎码完整学习周期的离线优先交互式训练器",
+  "license": "AGPL-3.0-or-later",
+  "author": "gxxk-dev",
+  "homepage": "https://github.com/gxxk-dev/tiger-code-trainer#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gxxk-dev/tiger-code-trainer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gxxk-dev/tiger-code-trainer/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

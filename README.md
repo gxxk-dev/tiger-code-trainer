@@ -51,3 +51,9 @@ bun run check      # lint + unit test + build
 浅色和深色字根图来自 [虎码官网](https://www.tiger-code.com/)，仅作为学习参考。项目没有打包官网的 PUA 字体；界面会把可识别的变体转换为标准主根，特殊变体可在字根图中查看。
 
 本项目与虎码官方无隶属关系。
+
+## 许可证
+
+除单独标注的第三方内容外，本项目以 [GNU Affero General Public License v3.0 or later](LICENSE) 发布：你可以使用、研究、修改和再分发，但向网络用户提供修改后的版本时，也必须向这些用户提供对应源代码。
+
+Copyright (C) 2026 gxxk-dev。项目不提供任何担保。官网字根图和数据来源的权利说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   Download,
+  GitFork,
   Laptop,
   Moon,
   Sun,
@@ -191,6 +192,24 @@ export function SettingsPanel({
               清空学习记录
             </Button>
             <p className="min-h-6 text-base text-zinc-600 sm:text-sm dark:text-zinc-400" aria-live="polite">{message}</p>
+          </section>
+
+          <section aria-labelledby="about-title" className="grid gap-3 border-t border-zinc-950/8 pt-7 dark:border-white/8">
+            <div>
+              <h3 id="about-title" className="font-medium text-zinc-950 dark:text-white">关于虎序</h3>
+              <p className="mt-1 text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-400">
+                Copyright (C) 2026 gxxk-dev。按 GNU AGPL v3 或更高版本发布，不提供任何担保。
+              </p>
+            </div>
+            <a
+              href="https://github.com/gxxk-dev/tiger-code-trainer"
+              target="_blank"
+              rel="noreferrer"
+              className="flex min-h-11 w-fit items-center gap-2 rounded-md px-2 text-base font-medium text-zinc-700 outline-none hover:bg-zinc-950/4 hover:text-zinc-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 sm:min-h-9 sm:text-sm dark:text-zinc-300 dark:hover:bg-white/6 dark:hover:text-white"
+            >
+              <GitFork className="size-4 shrink-0" aria-hidden="true" />
+              查看源代码与许可证
+            </a>
           </section>
         </div>
       </section>
