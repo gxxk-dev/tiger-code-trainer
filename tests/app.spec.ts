@@ -143,8 +143,25 @@ test('course exposes formula and split practice', async ({ page }) => {
   await formulaStage.getByRole('button', { name: '学习' }).click()
   await expect(page.getByRole('heading', { name: '只记这一条取码公式' })).toBeVisible()
   await page.getByRole('button', { name: '开始公式练习' }).click()
-  await page.getByRole('button', { name: 'Aa' }).click()
-  await expect(page.getByText('正确', { exact: true })).toBeVisible()
+  const answers = ['Aa', 'ABb', 'ABCc', 'ABCD', 'ABCZ']
+  const answerSlots: number[] = []
+
+  for (const [index, answer] of answers.entries()) {
+    const choices = page.getByRole('group', { name: '取码选项' }).getByRole('button')
+    const before = await choices.allTextContents()
+    answerSlots.push(before.indexOf(answer))
+    await page.getByRole('button', { name: answer, exact: true }).click()
+    await expect(page.getByText('正确', { exact: true })).toBeVisible()
+    expect(await choices.allTextContents()).toEqual(before)
+
+    if (index < answers.length - 1) {
+      await page.getByRole('button', { name: '下一题' }).click()
+    }
+  }
+
+  expect(answerSlots.toSorted()).toEqual([0, 1, 2, 3, 4])
+  expect(answerSlots).not.toEqual([0, 1, 2, 3, 4])
+  expect(answerSlots).not.toEqual([4, 3, 2, 1, 0])
   await page.getByRole('button', { name: '退出训练' }).click()
 
   const splitStage = page.getByRole('listitem').filter({ hasText: '看懂拆分' })

@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react'
 import clsx from 'clsx'
 import { Button } from '../ui/Button'
 import { ProgressBar } from '../ui/ProgressBar'
+import { buildFormulaPracticeRound } from '../../lib/formulaPractice'
 import type { TrainingFinishedHandler } from './types'
 
 interface FormulaTrainerProps {
@@ -11,14 +12,7 @@ interface FormulaTrainerProps {
 }
 
 export function FormulaTrainer({ onFinished, className }: FormulaTrainerProps) {
-  const questions = [
-    { count: 1, answer: 'Aa', roots: ['A'] },
-    { count: 2, answer: 'ABb', roots: ['A', 'B'] },
-    { count: 3, answer: 'ABCc', roots: ['A', 'B', 'C'] },
-    { count: 4, answer: 'ABCD', roots: ['A', 'B', 'C', 'D'] },
-    { count: 6, answer: 'ABCZ', roots: ['A', 'B', 'C', 'D', 'E', 'Z'] },
-  ]
-  const choices = ['Aa', 'ABb', 'ABCc', 'ABCD', 'ABCZ']
+  const [questions] = useState(() => buildFormulaPracticeRound())
   const [index, setIndex] = useState(0)
   const [selected, setSelected] = useState('')
   const [attempted, setAttempted] = useState(0)
@@ -61,8 +55,8 @@ export function FormulaTrainer({ onFinished, className }: FormulaTrainerProps) {
           <h1 className="text-2xl font-semibold text-zinc-950 dark:text-white">{question.count >= 5 ? '五根及以上怎样取码？' : `${question.count} 个字根怎样取码？`}</h1>
           <p className="mt-2 text-base text-zinc-600 sm:text-sm dark:text-zinc-400">大写是大码，小写是末根小码。</p>
         </div>
-        <div className="flex flex-wrap justify-center gap-2">
-          {choices.map((choice) => {
+        <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="取码选项">
+          {question.choices.map((choice) => {
             const revealCorrect = selected && choice === question.answer
             const revealWrong = selected === choice && choice !== question.answer
             return (
