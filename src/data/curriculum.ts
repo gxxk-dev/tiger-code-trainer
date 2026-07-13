@@ -21,7 +21,7 @@ const basicStrokeSpecs = [
   { name: '横', glyph: '一', code: 'fi' },
   { name: '竖', glyph: '丨', code: 'gs' },
   { name: '撇', glyph: '丿', code: 'tp' },
-  { name: '点', glyph: '丶', code: 'id' },
+  { name: '点/捺', glyph: '丶', code: 'id' },
   { name: '折', glyph: '㇆', code: 'ae' },
 ]
 
@@ -42,7 +42,7 @@ export const courseStages: CourseStage[] = [
     id: 'strokes',
     index: 1,
     title: '五个笔画，先会按',
-    description: '只认识横、竖、撇、点、折的编码，不讲笔画理论。',
+    description: '只认识横、竖、撇、点/捺、折的编码，不讲笔画理论。',
     kind: 'roots',
     target: '5 个编码',
     minutes: 3,

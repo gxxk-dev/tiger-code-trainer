@@ -9,13 +9,16 @@ test.beforeEach(async ({ page }) => {
 
 test('fresh learner sees answers and guided typing before recall', async ({ page }, testInfo) => {
   await expect(page.getByRole('heading', { name: '先看答案，不会也能开始' })).toBeVisible()
-  await expect(page.getByText('横 fi，竖 gs，撇 tp，点 id，折 ae。')).toBeVisible()
+  await expect(page.getByText('横 fi，竖 gs，撇 tp，点/捺 id，折 ae。')).toBeVisible()
+  await expect(page.getByText('F 键先绑定平横“一”；Flat 帮你找 f，i 来自 yī 的韵母。')).toBeVisible()
   await expect(page.getByText('快速热身')).toHaveCount(0)
   await page.getByRole('button', { name: '开始第 1 课' }).click()
+  const training = page.getByRole('dialog', { name: '第 1 课 · 五个基本笔画' })
 
   await expect(page.getByText('先学 · 答案可见')).toBeVisible()
   await expect(page.getByRole('heading', { name: '先看答案，不测试' })).toBeVisible()
   await expect(page.getByText('fi', { exact: true }).first()).toBeVisible()
+  await expect(training.getByText('G 键先绑定竖；想象一根“钢丝”竖直垂下，s 也来自 shù。')).toBeVisible()
   await expect(page.getByRole('textbox', { name: /输入.*虎码编码/ })).toHaveCount(0)
   await expect(page.getByRole('navigation')).toHaveCount(0)
 
@@ -33,20 +36,51 @@ test('fresh learner sees answers and guided typing before recall', async ({ page
   expect(await readProgressCount(page, 'mastery')).toBe(0)
 
   const answer = page.getByRole('textbox', { name: /输入.*虎码编码/ })
+  const hintButton = training.getByRole('button', { name: '给我一点提示' })
+  await expect(hintButton).toHaveAttribute('aria-expanded', 'false')
+  await expect(training.locator('#code-memory-hint')).toHaveCount(1)
+  await expect(training.getByText('F 键先绑定平横“一”；Flat 帮你找 f，i 来自 yī 的韵母。')).toHaveCount(0)
+  await hintButton.click()
+  await expect(training.getByRole('button', { name: '收起提示' })).toHaveAttribute('aria-expanded', 'true')
+  await expect(training.getByText('F 键先绑定平横“一”；Flat 帮你找 f，i 来自 yī 的韵母。')).toBeVisible()
+  await expect(answer).toBeEditable()
+  await expect(answer).toBeFocused()
+  await expect(answer).toHaveAttribute('aria-describedby', 'code-memory-hint')
   await answer.fill('fi')
-  await expect(page.getByText('正确', { exact: true })).toBeVisible()
+  await expect(page.getByText('借提示答对，本题不计掌握')).toBeVisible()
+  await expect(answer).not.toHaveAttribute('aria-describedby', /.+/)
+  await expect(training.getByRole('button', { name: '下一题' })).toBeFocused()
+  await page.waitForTimeout(1_100)
+  await expect(page.getByText('借提示答对，本题不计掌握')).toBeVisible()
   await expect.poll(() => readProgressCount(page, 'mastery')).toBe(1)
+  await expect.poll(() => readMasteryCorrect(page, 'root:fi:一')).toBe(0)
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
   expect(overflow).toBe(false)
   await page.screenshot({ path: `test-results/${testInfo.project.name}-guided-training.png`, fullPage: true })
 
-  for (const code of codes.slice(1)) {
+  await page.keyboard.press('Enter')
+  await expect(training.getByText('G 键先绑定竖；想象一根“钢丝”竖直垂下，s 也来自 shù。')).toHaveCount(0)
+  await answer.fill('aa')
+  await expect(page.getByText('你的输入：aa')).toBeVisible()
+  await expect(page.getByText('正确编码：').getByText('gs')).toBeVisible()
+  await expect(training.getByText('G 键先绑定竖；想象一根“钢丝”竖直垂下，s 也来自 shù。')).toBeVisible()
+  await page.getByRole('button', { name: '下一题' }).click()
+
+  for (const code of ['tp', 'id', 'ae']) {
     await expect(answer).toBeEditable()
     await answer.fill(code)
     await expect(page.getByText('正确', { exact: true })).toBeVisible()
   }
-  await expect(page.getByRole('heading', { name: '本轮完成' })).toBeVisible()
+  await expect(page.getByText('本轮错题再测')).toBeVisible()
+  await expect(training.getByRole('button', { name: '给我一点提示' })).toHaveAttribute('aria-expanded', 'false')
+  await expect(training.getByText('G 键先绑定竖；想象一根“钢丝”竖直垂下，s 也来自 shù。')).toHaveCount(0)
+  await answer.fill('gs')
+  await expect(page.getByText('正确', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '本轮完成' })).toBeFocused()
+  await expect(training.getByText('67%', { exact: true })).toBeVisible()
+  await expect(training.locator('dl > div').filter({ hasText: '首答正确' }).getByText('3', { exact: true })).toBeVisible()
+  await expect.poll(() => readLatestSessionSummary(page)).toBe('6/4/3')
   await page.getByRole('button', { name: '继续下一步' }).click()
   await expect(page.getByRole('heading', { name: '下一步只学一条取码公式' })).toBeVisible()
   await expect(page.getByRole('button', { name: '学习取码公式' })).toBeFocused()
@@ -58,6 +92,13 @@ test('lookup loads offline character data', async ({ page }) => {
   await search.fill('虎码')
   await expect(page.getByText('zh', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('mnm', { exact: true })).toBeVisible()
+
+  await page.getByRole('tab', { name: '字根' }).click()
+  const rootSearch = page.getByRole('searchbox', { name: '输入字根或编码' })
+  await rootSearch.fill('bk')
+  await expect(page.getByText('𠂎', { exact: true })).toBeVisible()
+  await rootSearch.fill('rk')
+  await expect(page.getByText('囗', { exact: true }).first()).toBeVisible()
 })
 
 test('theme choice persists and dark asset is selected', async ({ page }, testInfo) => {
@@ -152,6 +193,20 @@ test('today and training views have no serious accessibility violations', async 
     .withTags(['wcag2a', 'wcag2aa'])
     .analyze()
   expect(trainingResults.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([])
+
+  await page.getByRole('button', { name: '我已经会了，直接练习' }).click()
+  await page.getByRole('button', { name: '给我一点提示' }).click()
+  const hintResults = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze()
+  expect(hintResults.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([])
+
+  await page.getByRole('textbox', { name: /输入.*虎码编码/ }).fill('aa')
+  await expect(page.getByRole('button', { name: '下一题' })).toBeFocused()
+  const incorrectResults = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .analyze()
+  expect(incorrectResults.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([])
 })
 
 test('legacy learner keeps progress and continues with the formula', async ({ page }) => {
@@ -223,6 +278,25 @@ async function readProgressCount(page: Page, key: 'learned' | 'mastery'): Promis
     const progress = JSON.parse(window.localStorage.getItem('tiger-flow-progress-v1') ?? '{}') as Record<string, Record<string, unknown>>
     return Object.keys(progress[field] ?? {}).length
   }, key)
+}
+
+async function readMasteryCorrect(page: Page, id: string): Promise<number> {
+  return page.evaluate((itemId) => {
+    const progress = JSON.parse(window.localStorage.getItem('tiger-flow-progress-v1') ?? '{}') as {
+      mastery?: Record<string, { correct?: number }>
+    }
+    return progress.mastery?.[itemId]?.correct ?? -1
+  }, id)
+}
+
+async function readLatestSessionSummary(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const progress = JSON.parse(window.localStorage.getItem('tiger-flow-progress-v1') ?? '{}') as {
+      sessions?: Array<{ attempted: number; correct: number; firstTryCorrect: number }>
+    }
+    const session = progress.sessions?.at(-1)
+    return session ? `${session.attempted}/${session.correct}/${session.firstTryCorrect}` : ''
+  })
 }
 
 async function hasHorizontalOverflow(page: Page): Promise<boolean> {

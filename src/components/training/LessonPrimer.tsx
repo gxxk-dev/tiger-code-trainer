@@ -14,8 +14,10 @@ import {
   rootId,
 } from '../../lib/items'
 import { lessonIdsForRequest, sourceItemId } from '../../lib/lessons'
+import { getRootMemoryHint } from '../../lib/rootHints'
 import type { ProgressState, TrainingRequest } from '../../types'
 import { Button } from '../ui/Button'
+import { MemoryHint } from './MemoryHint'
 
 interface LessonPrimerProps {
   request: TrainingRequest
@@ -29,6 +31,7 @@ interface LessonItem {
   label: string
   code: string
   detail: string
+  hint?: string
 }
 
 export function LessonPrimer({ request, progress, onComplete }: LessonPrimerProps) {
@@ -81,7 +84,7 @@ function CodeLesson({
           <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">第 1 步 / 3 · 认识</p>
           <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl font-semibold text-balance text-zinc-950 outline-none dark:text-white">先看答案，不测试</h1>
           <p className="mt-3 max-w-[58ch] text-base text-pretty text-zinc-600 dark:text-zinc-400">
-            这轮只学 {items.length} 个。把字形和编码一起看一遍，现在不用背熟，也不会计分。
+            这轮只学 {items.length} 个。把字形、编码和学习联想一起看一遍；联想不是额外规则，现在也不用背熟。
           </p>
         </header>
 
@@ -89,11 +92,14 @@ function CodeLesson({
           {items.map((lessonItem) => (
             <li key={lessonItem.id} className="grid min-h-36 grid-cols-[4rem_1fr] items-center gap-4 rounded-lg bg-white p-4 ring-1 ring-zinc-950/8 dark:bg-white/4 dark:ring-white/8">
               <span className="font-root text-5xl font-medium text-zinc-950 dark:text-white">{displayRootGlyph(lessonItem.glyph)}</span>
-              <span className="min-w-0">
+              <div className="min-w-0">
                 <span className="block text-base font-medium text-zinc-500 sm:text-sm dark:text-zinc-400">{lessonItem.label}</span>
                 <span className="mt-1 block font-mono text-2xl font-semibold text-brand-700 dark:text-brand-300">{lessonItem.code}</span>
                 <span className="mt-2 block text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">{lessonItem.detail}</span>
-              </span>
+                {lessonItem.hint ? (
+                  <MemoryHint text={lessonItem.hint} className="mt-3 border-t border-zinc-950/8 pt-3 dark:border-white/8" />
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>
@@ -137,6 +143,9 @@ function CodeLesson({
             <span key={`${character}-${codeIndex}`} className="flex size-12 items-center justify-center rounded-md bg-blue-500/8 font-mono text-xl font-semibold text-blue-800 ring-1 ring-blue-500/20 dark:text-blue-200">{character}</span>
           ))}
         </div>
+        {item.hint ? (
+          <MemoryHint text={item.hint} className="max-w-lg text-left" />
+        ) : null}
         <label className="grid w-full max-w-xs gap-2 text-left text-base font-medium text-zinc-700 sm:text-sm dark:text-zinc-300">
           照着输入 {item.code}
           <input
@@ -255,13 +264,14 @@ function buildLessonItems(itemIds: string[], request: TrainingRequest): LessonIt
     const root = resolveRoot(sourceId)
     if (root) {
       const stroke = basicStrokes.find((candidate) => rootId(candidate.entry) === sourceId)
-      const examples = [...new Set(Array.from(root.examples.join('')))].slice(0, 4).join('、')
+      const hint = getRootMemoryHint(root)
       return [{
         id,
         glyph: root.root,
         label: stroke?.name ?? '字根',
         code: root.code,
-        detail: `大码 ${root.code[0]} · 小码 ${root.code[1]}${examples ? ` · 例字 ${examples}` : ''}`,
+        detail: hint.compactCue,
+        hint: hint.mnemonic,
       }]
     }
     const character = resolveCharacter(sourceId)

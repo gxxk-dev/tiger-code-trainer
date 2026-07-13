@@ -4,7 +4,7 @@ import { ProgressBar } from '../components/ui/ProgressBar'
 import { characters } from '../data/characters.generated'
 import { articles, basicStrokes, courseStages, orderedRoots, rootPacks, splitExamples } from '../data/curriculum'
 import { requiredSplits } from '../data/splits.generated'
-import { characterId, rootId, splitId } from '../lib/items'
+import { characterId, displayRootGlyph, rootId, splitId } from '../lib/items'
 import { masteryPercent } from '../lib/mastery'
 import { shortcutLessonId, shouldShowLesson } from '../lib/lessons'
 import type { CourseStage, ProgressState, TrainingRequest } from '../types'
@@ -97,7 +97,7 @@ export function CourseView({ progress, onStart }: CourseViewProps) {
                   <span className="font-mono text-sm text-zinc-500 tabular-nums dark:text-zinc-400">{String(index + 1).padStart(2, '0')}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-base font-medium text-zinc-950 sm:text-sm dark:text-white">{pack.title}</span>
-                    <span className="mt-1 block truncate font-root text-sm text-zinc-500 dark:text-zinc-400">{pack.roots.slice(0, 8).map((root) => root.root).join(' ')}</span>
+                    <span className="mt-1 block truncate font-root text-sm text-zinc-500 dark:text-zinc-400">{pack.roots.slice(0, 8).map((root) => displayRootGlyph(root.root, root.code)).join(' ')}</span>
                   </span>
                   <span className="text-sm text-zinc-500 tabular-nums dark:text-zinc-400">{score}%</span>
                 </button>

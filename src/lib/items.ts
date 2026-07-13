@@ -71,7 +71,7 @@ export function resolveSplit(id: string): SplitEntry | undefined {
 
 export function getItemLabel(id: string): { glyph: string; detail: string } {
   const root = resolveRoot(id)
-  if (root) return { glyph: root.root, detail: `字根 ${root.code}` }
+  if (root) return { glyph: displayRootGlyph(root.root, root.code), detail: `字根 ${root.code}` }
   const character = resolveCharacter(id)
   if (character) return { glyph: character.char, detail: `全码 ${character.code}` }
   const split = resolveSplit(id)
@@ -80,6 +80,8 @@ export function getItemLabel(id: string): { glyph: string; detail: string } {
 }
 
 export function displayRootGlyph(glyph: string, code?: string): string {
+  if (glyph === '') return '𠂎'
+  if (glyph === '囗(框)') return '囗'
   const exact = orderedRoots.find((root) => root.root === glyph)
   if (exact) return exact.root
   const variant = orderedRoots.find((root) => Array.from(root.variants ?? '').includes(glyph))

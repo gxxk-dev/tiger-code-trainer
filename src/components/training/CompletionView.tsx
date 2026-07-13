@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Check } from 'lucide-react'
 import clsx from 'clsx'
 import { median } from '../../lib/mastery'
@@ -13,19 +14,25 @@ interface CompletionViewProps {
 }
 
 export function CompletionView({ request, result, onClose, className }: CompletionViewProps) {
+  const headingRef = useRef<HTMLHeadingElement>(null)
   const accuracy = Math.round(result.correct / Math.max(1, result.attempted) * 100)
   const nextStep = request.stageId === 'strokes'
     ? '下一步：学习一条取码公式。'
     : request.stageId === 'formula'
       ? '下一步：每次认识 5 个常用字根。'
       : ''
+
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
+
   return (
     <main className={clsx('mx-auto grid min-h-[calc(100dvh-4rem)] max-w-3xl content-center gap-8 px-4 py-10 text-center sm:px-6 lg:px-8', className)}>
       <div>
         <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" aria-hidden="true">
           <Check className="size-5" />
         </span>
-        <h1 className="mt-5 text-3xl font-semibold text-zinc-950 dark:text-white">本轮完成</h1>
+        <h1 ref={headingRef} tabIndex={-1} className="mt-5 text-3xl font-semibold text-zinc-950 outline-none dark:text-white">本轮完成</h1>
         <p className="mt-2 text-base text-zinc-600 sm:text-sm dark:text-zinc-400">{request.title}</p>
         {nextStep ? <p className="mt-2 text-base font-medium text-brand-700 sm:text-sm dark:text-brand-300">{nextStep}</p> : null}
       </div>

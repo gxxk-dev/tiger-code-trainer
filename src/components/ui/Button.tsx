@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import clsx from 'clsx'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
@@ -17,7 +17,7 @@ const variants: Record<ButtonVariant, string> = {
   danger: 'bg-red-500/10 text-red-700 ring-1 ring-red-600/15 hover:bg-red-500/15 focus-visible:outline-red-500 dark:text-red-300 dark:ring-red-400/20',
 }
 
-export function Button({
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
   variant = 'secondary',
   size = 'default',
   leadingIcon,
@@ -25,9 +25,10 @@ export function Button({
   className,
   children,
   ...props
-}: ButtonProps) {
+}, ref) {
   return (
     <button
+      ref={ref}
       type="button"
       className={clsx(
         'inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium outline-none disabled:pointer-events-none disabled:opacity-45',
@@ -44,7 +45,7 @@ export function Button({
       {trailingIcon}
     </button>
   )
-}
+})
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string

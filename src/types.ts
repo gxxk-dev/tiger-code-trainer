@@ -15,6 +15,7 @@ export interface RootEntry {
   code: string
   variants?: string
   label?: string
+  pronunciation: string
   examples: string[]
 }
 

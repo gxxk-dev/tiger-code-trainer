@@ -11,6 +11,7 @@ import {
   rootId,
   splitId,
 } from '../lib/items'
+import { getRootMemoryHint } from '../lib/rootHints'
 import type { ProgressState, TrainingRequest } from '../types'
 
 interface TodayViewProps {
@@ -221,16 +222,23 @@ function FirstLessonView({ onStart, onSkip }: { onStart: () => void; onSkip: () 
         <section aria-labelledby="memory-title">
           <p className="font-mono text-sm font-medium text-blue-700 dark:text-blue-300">唯一需要背的内容</p>
           <h2 id="memory-title" className="mt-2 text-xl font-semibold text-zinc-950 dark:text-white">这一课只记 5 个基本笔画</h2>
+          <p className="mt-2 max-w-[58ch] text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-400">下面是临时学习联想，不是额外编码规则；哪个有用就留哪个。</p>
           <ul role="list" className="mt-5 divide-y divide-zinc-950/8 border-y border-zinc-950/8 dark:divide-white/8 dark:border-white/8">
-            {basicStrokes.map((stroke) => (
-              <li key={stroke.code} className="grid grid-cols-[3rem_4rem_1fr] items-center gap-4 py-4">
-                <span className="text-base font-medium text-zinc-700 dark:text-zinc-200">{stroke.name}</span>
-                <span className="font-root text-3xl font-medium text-zinc-950 dark:text-white">{stroke.glyph}</span>
-                <span className="font-mono text-2xl font-semibold text-brand-700 dark:text-brand-300">{stroke.code}</span>
-              </li>
-            ))}
+            {basicStrokes.map((stroke) => {
+              const hint = getRootMemoryHint(stroke.entry)
+              return (
+                <li key={stroke.code} className="grid grid-cols-[3.5rem_3rem_minmax(0,1fr)] items-start gap-3 py-4 sm:grid-cols-[3.5rem_4rem_minmax(0,1fr)] sm:gap-4">
+                  <span className="pt-1 text-base font-medium text-zinc-700 dark:text-zinc-200">{stroke.name}</span>
+                  <span className="font-root text-3xl font-medium text-zinc-950 dark:text-white">{stroke.glyph}</span>
+                  <span className="min-w-0">
+                    <span className="block font-mono text-2xl font-semibold text-brand-700 dark:text-brand-300">{stroke.code}</span>
+                    <span className="mt-1 block text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">{hint.mnemonic}</span>
+                  </span>
+                </li>
+              )
+            })}
           </ul>
-          <p className="mt-4 text-base font-medium text-zinc-700 dark:text-zinc-200">横 fi，竖 gs，撇 tp，点 id，折 ae。</p>
+          <p className="mt-4 text-base font-medium text-zinc-700 dark:text-zinc-200">横 fi，竖 gs，撇 tp，点/捺 id，折 ae。</p>
         </section>
 
         <aside aria-labelledby="lesson-steps-title" className="border-t border-zinc-950/8 pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-7 dark:border-white/8">

@@ -128,7 +128,7 @@ export function LookupView() {
           <ul role="list" className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {rootResults.map((root, index) => (
               <li key={`${root.root}-${root.code}-${index}`} className="flex min-w-0 items-center gap-4 rounded-md bg-white p-3 ring-1 ring-zinc-950/8 dark:bg-white/4 dark:ring-white/8">
-                <span className="flex size-11 shrink-0 items-center justify-center font-root text-2xl font-medium text-zinc-950 dark:text-white">{root.root}</span>
+                <span className="flex size-11 shrink-0 items-center justify-center font-root text-2xl font-medium text-zinc-950 dark:text-white">{displayRootGlyph(root.root, root.code)}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-mono text-base font-semibold text-brand-700 dark:text-brand-300">{root.code}</span>
                   <span className="mt-1 block truncate font-root text-sm text-zinc-500 dark:text-zinc-400">{root.examples.join(' · ') || root.variants || '字根'}</span>

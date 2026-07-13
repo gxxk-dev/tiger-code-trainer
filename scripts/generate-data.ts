@@ -57,6 +57,7 @@ async function generateRoots(): Promise<void> {
       root,
       code: code.toLowerCase(),
       variants: variantParts.join(' ') || undefined,
+      pronunciation,
       label: pronunciation.replace(/[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ]/gi, '').trim(),
       examples,
     }]
