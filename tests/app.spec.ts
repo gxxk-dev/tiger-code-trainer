@@ -79,6 +79,13 @@ test('fresh learner sees answers and guided typing before recall', async ({ page
   await page.getByRole('button', { name: '继续下一步' }).click()
   await expect(page.getByRole('heading', { name: '下一步只学一条取码公式' })).toBeVisible()
   await expect(page.getByRole('button', { name: '学习取码公式' })).toBeFocused()
+
+  await openView(page, '课程')
+  const strokeStage = page.getByRole('listitem').filter({
+    has: page.getByRole('heading', { name: '五个笔画，先会按' }),
+  })
+  await expect(strokeStage.getByText('100%', { exact: true })).toBeVisible()
+  await expect(strokeStage.getByText('已完成', { exact: true })).toBeVisible()
 })
 
 test('root primer explains complete roots and applies their codes to a character', async ({ page }) => {
@@ -126,10 +133,18 @@ test('leaving after guided root copying returns to the primer', async ({ page })
   await training.getByRole('button', { name: '退出训练' }).click()
   await expect(page.getByRole('heading', { name: '先看答案，不会也能开始' })).toBeVisible()
 
-  await page.getByRole('button', { name: '开始第 1 课' }).click()
-  await expect(training.getByRole('heading', { name: '先认识完整字根和根码' })).toBeVisible()
-  await expect(training.getByRole('note', { name: '字根说明' })).toBeVisible()
-  await expect(training.getByRole('textbox', { name: /输入.*虎码编码/ })).toHaveCount(0)
+  await openView(page, '课程')
+  const incompleteStrokeStage = page.getByRole('listitem').filter({
+    has: page.getByRole('heading', { name: '五个笔画，先会按' }),
+  })
+  await expect(incompleteStrokeStage.getByText('0%', { exact: true })).toBeVisible()
+  await expect(incompleteStrokeStage.getByText('已完成', { exact: true })).toHaveCount(0)
+
+  await incompleteStrokeStage.getByRole('button', { name: '学习' }).click()
+  const resumedTraining = page.getByRole('dialog', { name: '五个笔画，先会按' })
+  await expect(resumedTraining.getByRole('heading', { name: '先认识完整字根和根码' })).toBeVisible()
+  await expect(resumedTraining.getByRole('note', { name: '字根说明' })).toBeVisible()
+  await expect(resumedTraining.getByRole('textbox', { name: /输入.*虎码编码/ })).toHaveCount(0)
 })
 
 test('split learner can request the worked process without gaining mastery', async ({ page }) => {
@@ -424,7 +439,16 @@ test('legacy learner keeps progress and continues with the formula', async ({ pa
   await expect(page.getByRole('heading', { name: '下一步只学一条取码公式' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '先看答案，不会也能开始' })).toHaveCount(0)
   await expect.poll(async () => page.evaluate(() => JSON.parse(window.localStorage.getItem('tiger-flow-progress-v1') ?? '{}').version)).toBe(2)
-  await page.getByRole('button', { name: '学习取码公式' }).click()
+
+  await openView(page, '课程')
+  const migratedStrokeStage = page.getByRole('listitem').filter({
+    has: page.getByRole('heading', { name: '五个笔画，先会按' }),
+  })
+  await expect(migratedStrokeStage.getByText('100%', { exact: true })).toBeVisible()
+  await expect(migratedStrokeStage.getByText('已完成', { exact: true })).toBeVisible()
+
+  const formulaStage = page.getByRole('listitem').filter({ hasText: '一条取码公式' })
+  await formulaStage.getByRole('button', { name: '学习' }).click()
   await expect(page.getByRole('heading', { name: '只记这一条取码公式' })).toBeVisible()
 })
 
@@ -432,6 +456,12 @@ test('experienced learner can persistently skip the first lesson', async ({ page
   await page.getByRole('button', { name: '我已经学过' }).click()
   await expect(page.getByRole('heading', { name: '从第一次按键，到稳定日用' })).toBeVisible()
   await expect.poll(async () => page.evaluate(() => JSON.parse(window.localStorage.getItem('tiger-flow-progress-v1') ?? '{}').onboardingComplete)).toBe(true)
+
+  const skippedStrokeStage = page.getByRole('listitem').filter({
+    has: page.getByRole('heading', { name: '五个笔画，先会按' }),
+  })
+  await expect(skippedStrokeStage.getByText('100%', { exact: true })).toBeVisible()
+  await expect(skippedStrokeStage.getByText('已完成', { exact: true })).toBeVisible()
 
   await page.reload()
   await expect(page.getByRole('heading', { name: '下一步只学一条取码公式' })).toBeVisible()

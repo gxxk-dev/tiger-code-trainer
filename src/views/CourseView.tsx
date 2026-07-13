@@ -37,16 +37,17 @@ export function CourseView({ progress, onStart }: CourseViewProps) {
             const percent = stageProgress(stage, progress)
             const request = requestForStage(stage, progress)
             const needsLesson = shouldShowLesson(request, progress)
+            const completed = hasCompletedStage(stage, progress)
             return (
               <li key={stage.id} className="grid gap-4 py-5 md:grid-cols-[2.5rem_minmax(0,1fr)_9rem_auto] md:items-center">
                 <span className="font-mono text-sm text-zinc-500 tabular-nums dark:text-zinc-400">{String(stage.index).padStart(2, '0')}</span>
                 <div className="min-w-0">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <h3 className="text-lg font-semibold text-zinc-950 dark:text-white">{stage.title}</h3>
-                    {percent >= 85 ? (
+                    {completed || percent >= 85 ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 py-1 pr-2 pl-1 text-sm font-medium text-emerald-700 dark:text-emerald-300">
                         <Check className="size-4 shrink-0" aria-hidden="true" />
-                        稳定
+                        {completed ? '已完成' : '稳定'}
                       </span>
                     ) : null}
                   </div>
@@ -164,10 +165,11 @@ function requestForStage(stage: CourseStage, progress: ProgressState): TrainingR
 
 function stageProgress(stage: CourseStage, progress: ProgressState): number {
   if (stage.id === 'strokes') {
+    if (hasCompletedStage(stage, progress)) return 100
     const entries = basicStrokes.map((stroke) => stroke.entry)
     return average(entries.map((root) => masteryPercent(progress.mastery[rootId(root)])))
   }
-  if (stage.id === 'formula') return progress.sessions.some((session) => session.stageId === stage.id) ? 100 : 0
+  if (stage.id === 'formula') return hasCompletedStage(stage, progress) ? 100 : 0
   if (stage.id === 'roots') return average(orderedRoots.map((root) => masteryPercent(progress.mastery[rootId(root)])))
   if (stage.id === 'splits') return average(requiredSplits.map((split) => masteryPercent(progress.mastery[splitId(split)])))
   if (stage.id === 'first-500') return average(characters.slice(0, 500).map((entry) => masteryPercent(progress.mastery[characterId(entry)])))
@@ -179,6 +181,12 @@ function stageProgress(stage: CourseStage, progress: ProgressState): number {
   const sessions = progress.sessions.filter((session) => session.stageId === stage.id)
   if (!sessions.length) return 0
   return Math.min(100, Math.round(sessions.reduce((sum, session) => sum + session.correct / Math.max(1, session.attempted) * 100, 0) / sessions.length))
+}
+
+function hasCompletedStage(stage: CourseStage, progress: ProgressState): boolean {
+  if (stage.id === 'strokes') return progress.onboardingComplete
+  return stage.id === 'formula'
+    && progress.sessions.some((session) => session.stageId === stage.id)
 }
 
 function average(values: number[]): number {
