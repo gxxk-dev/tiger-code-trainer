@@ -365,6 +365,9 @@ test('theme choice persists and dark asset is selected', async ({ page }, testIn
   }
   await page.getByRole('button', { name: '深色' }).click()
   await expect(page.locator('html')).toHaveClass(/dark/)
+  const buildInfo = page.getByText(/^版本 (?:[0-9a-f]{7}|dev) · 构建于 \d{4}-\d{2}-\d{2}$/)
+  await expect(buildInfo).toBeVisible()
+  await expect(buildInfo.locator('time')).toHaveAttribute('datetime', /^\d{4}-\d{2}-\d{2}T/)
   await page.getByRole('button', { name: '关闭设置', exact: true }).click()
   await page.reload()
   await expect(page.locator('html')).toHaveClass(/dark/)

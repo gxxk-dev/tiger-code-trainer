@@ -193,6 +193,9 @@ export function SettingsPanel({
               <p className="mt-1 text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-400">
                 Copyright (C) 2026 gxxk-dev。按 GNU AGPL v3 或更高版本发布，不提供任何担保。
               </p>
+              <p className="mt-2 text-base text-zinc-500 tabular-nums sm:text-sm dark:text-zinc-400">
+                版本 <BuildCommit /> · 构建于 <time dateTime={__BUILD_DATE__}>{formatBuildDate(__BUILD_DATE__)}</time>
+              </p>
             </div>
             <a
               href="https://github.com/gxxk-dev/tiger-code-trainer"
@@ -208,6 +211,29 @@ export function SettingsPanel({
       </section>
     </div>
   )
+}
+
+function BuildCommit() {
+  if (__BUILD_COMMIT__ === 'dev') return <>dev</>
+  return (
+    <a
+      href={`https://github.com/gxxk-dev/tiger-code-trainer/commit/${__BUILD_COMMIT__}`}
+      target="_blank"
+      rel="noreferrer"
+      className="rounded-sm text-zinc-700 outline-none hover:text-zinc-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 dark:text-zinc-300 dark:hover:text-white"
+    >
+      {__BUILD_COMMIT__}
+    </a>
+  )
+}
+
+function formatBuildDate(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 interface SettingToggleProps {

@@ -1,12 +1,19 @@
+import { execFileSync } from 'node:child_process'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const basePath = process.env.VITE_BASE_PATH ?? '/'
+const buildCommit = (process.env.VITE_BUILD_COMMIT ?? readGitCommit()).slice(0, 7)
+const buildDate = process.env.VITE_BUILD_DATE ?? new Date().toISOString()
 
 export default defineConfig({
   base: basePath,
+  define: {
+    __BUILD_COMMIT__: JSON.stringify(buildCommit),
+    __BUILD_DATE__: JSON.stringify(buildDate),
+  },
   build: {
     // The 5000-character offline lookup table is intentionally a lazy chunk.
     chunkSizeWarningLimit: 1400,
@@ -48,3 +55,11 @@ export default defineConfig({
     }),
   ],
 })
+
+function readGitCommit(): string {
+  try {
+    return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], { encoding: 'utf8' }).trim()
+  } catch {
+    return 'dev'
+  }
+}
