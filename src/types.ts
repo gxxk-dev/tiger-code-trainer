@@ -37,6 +37,7 @@ export interface CharacterLookupEntry extends CharacterEntry {
 export interface SplitEntry {
   char: string
   roots: string[]
+  rootCodes?: string[]
   code: string
   note: string
   rule?: 'order' | 'frame' | 'cut' | 'walk' | 'shape'

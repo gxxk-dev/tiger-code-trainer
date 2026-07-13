@@ -3,6 +3,7 @@ import { KeyboardMap } from '../components/KeyboardMap'
 import { Button } from '../components/ui/Button'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { basicStrokes, courseStages, orderedRoots, splitExamples } from '../data/curriculum'
+import { requiredSplits } from '../data/splits.generated'
 import {
   countMastered,
   dueItemIds,
@@ -12,6 +13,7 @@ import {
   splitId,
 } from '../lib/items'
 import { getRootMemoryHint } from '../lib/rootHints'
+import { splitUsesOnlyRoots } from '../lib/splitEncoding'
 import type { ProgressState, TrainingRequest } from '../types'
 
 interface TodayViewProps {
@@ -45,6 +47,7 @@ export function TodayView({ progress, onStart, onOpenCourse, onSkipOnboarding }:
   const splitMastered = countMastered(progress, 'split:')
   const bestSpeed = Math.max(0, ...progress.sessions.map((session) => session.charsPerMinute ?? 0))
   const formulaComplete = progress.sessions.some((session) => session.stageId === 'formula')
+  const splitPlan = splitsForKnownRoots(progress, 5)
   const shortcutsStarted = progress.sessions.some((session) => session.stageId === 'shortcuts')
   const phrasesStarted = progress.sessions.some((session) => session.stageId === 'phrases')
   const currentStage = !formulaComplete
@@ -160,13 +163,17 @@ export function TodayView({ progress, onStart, onOpenCourse, onSkipOnboarding }:
             />
             <PlanItem
               index="03"
-              title={firstMastered > 0 ? '真实中文短句' : '第一个拆分示范'}
-              detail={firstMastered > 0 ? '使用 Fcitx5 虎码输入' : '先看答案，再选字根'}
+              title={firstMastered > 0 ? '真实中文短句' : splitPlan.review ? '已学拆字复习' : '第一个拆分示范'}
+              detail={firstMastered > 0
+                ? '使用 Fcitx5 虎码输入'
+                : splitPlan.knownOnly
+                  ? `${splitPlan.items.length} 个只用已学字根的例字`
+                  : '先看完整过程，再选字根'}
               minutes={3}
               icon={<Keyboard className="size-4" aria-hidden="true" />}
               onClick={() => onStart(firstMastered > 0
                 ? { kind: 'article', title: '真实中文短句', stageId: 'phrases', articleId: 'message' }
-                : { kind: 'splits', title: '第一个拆分示范', stageId: 'splits', itemIds: splitExamples.slice(0, 5).map(splitId) })}
+                : { kind: 'splits', title: splitPlan.review ? '已学拆字复习' : '第一个拆分示范', stageId: 'splits', itemIds: splitPlan.items.map(splitId) })}
             />
           </ol>
         </section>
@@ -198,6 +205,27 @@ export function TodayView({ progress, onStart, onOpenCourse, onSkipOnboarding }:
       </section>
     </div>
   )
+}
+
+function splitsForKnownRoots(progress: ProgressState, count: number) {
+  const knownRoots = orderedRoots.filter((root) => progress.learned[rootId(root)] || progress.mastery[rootId(root)])
+  const preferred = new Map(['休', '扣', '什', '百', '么', '仕', '刁', '壬', '与'].map((char, index) => [char, index]))
+  const knownCandidates = [...requiredSplits, ...splitExamples]
+    .filter((split, index, entries) => entries.findIndex((entry) => entry.char === split.char) === index)
+    .filter((split) => split.roots.length >= 2 && split.roots.length <= 3)
+    .filter((split) => splitUsesOnlyRoots(split, knownRoots))
+    .sort((left, right) => {
+      const leftPriority = preferred.get(left.char) ?? 999
+      const rightPriority = preferred.get(right.char) ?? 999
+      return leftPriority - rightPriority || left.roots.length - right.roots.length
+    })
+  const unseenKnown = knownCandidates.filter((split) => !progress.mastery[splitId(split)])
+
+  if (unseenKnown.length) return { items: unseenKnown.slice(0, count), knownOnly: true, review: false }
+  if (knownCandidates.length) return { items: knownCandidates.slice(0, count), knownOnly: true, review: true }
+
+  const unseenExamples = splitExamples.filter((split) => !progress.mastery[splitId(split)])
+  return { items: (unseenExamples.length ? unseenExamples : splitExamples).slice(0, count), knownOnly: false, review: false }
 }
 
 function FirstLessonView({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {

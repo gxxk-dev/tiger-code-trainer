@@ -1,7 +1,7 @@
 import { characters } from '../data/characters.generated'
 import { orderedRoots, splitExamples } from '../data/curriculum'
 import type { ProgressState, TrainingRequest } from '../types'
-import { characterId, rootId, splitId } from './items'
+import { characterId, rootId, shortcutId, splitId } from './items'
 
 const FORMULA_LESSON_ID = 'lesson:formula'
 const SHORTCUT_LESSON_PREFIX = 'lesson:shortcut:'
@@ -13,7 +13,8 @@ export function shortcutLessonId(itemId: string): string {
 export function lessonIdsForRequest(request: TrainingRequest, progress: ProgressState): string[] {
   if (request.kind === 'review') return []
   if (request.kind === 'formula') {
-    return progress.learned[FORMULA_LESSON_ID] ? [] : [FORMULA_LESSON_ID]
+    const completed = progress.sessions.some((session) => session.kind === 'formula' && (!request.stageId || session.stageId === request.stageId))
+    return completed ? [] : [FORMULA_LESSON_ID]
   }
   if (request.kind === 'article') {
     const id = `lesson:article:${request.articleId ?? 'default'}`
@@ -26,7 +27,11 @@ export function lessonIdsForRequest(request: TrainingRequest, progress: Progress
   const lessonIds = request.stageId === 'shortcuts'
     ? requestedIds.map(shortcutLessonId)
     : requestedIds
-  return lessonIds.filter((id) => !progress.learned[id])
+  return lessonIds.filter((id) => {
+    if (!progress.learned[id]) return true
+    if (request.stageId === 'shortcuts') return !progress.mastery[shortcutId(sourceItemId(id))]
+    return !progress.mastery[sourceItemId(id)]
+  })
 }
 
 export function sourceItemId(lessonId: string): string {

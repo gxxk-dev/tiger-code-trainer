@@ -4,9 +4,9 @@ import { ProgressBar } from '../components/ui/ProgressBar'
 import { characters } from '../data/characters.generated'
 import { articles, basicStrokes, courseStages, orderedRoots, rootPacks, splitExamples } from '../data/curriculum'
 import { requiredSplits } from '../data/splits.generated'
-import { characterId, displayRootGlyph, rootId, splitId } from '../lib/items'
+import { characterId, displayRootGlyph, rootId, shortcutId, splitId } from '../lib/items'
 import { masteryPercent } from '../lib/mastery'
-import { shortcutLessonId, shouldShowLesson } from '../lib/lessons'
+import { shouldShowLesson } from '../lib/lessons'
 import type { CourseStage, ProgressState, TrainingRequest } from '../types'
 
 interface CourseViewProps {
@@ -145,7 +145,7 @@ function requestForStage(stage: CourseStage, progress: ProgressState): TrainingR
     }
     case 'shortcuts': {
       const pool = characters.filter((item) => item.short)
-      const unseen = pool.filter((item) => !progress.learned[shortcutLessonId(characterId(item))])
+      const unseen = pool.filter((item) => !progress.mastery[shortcutId(item)])
       return { kind: 'characters', title: stage.title, stageId: stage.id, itemIds: (unseen.length ? unseen : pool).slice(0, count + 4).map(characterId) }
     }
     case 'phrases':
@@ -173,7 +173,7 @@ function stageProgress(stage: CourseStage, progress: ProgressState): number {
   if (stage.id === 'first-500') return average(characters.slice(0, 500).map((entry) => masteryPercent(progress.mastery[characterId(entry)])))
   if (stage.id === 'shortcuts') {
     const shortcutEntries = characters.slice(0, 500).filter((entry) => entry.short)
-    return Math.min(100, Math.round(progress.sessions.filter((session) => session.stageId === stage.id).length * 25 + average(shortcutEntries.map((entry) => masteryPercent(progress.mastery[characterId(entry)]))) * 0.5))
+    return Math.min(100, Math.round(progress.sessions.filter((session) => session.stageId === stage.id).length * 25 + average(shortcutEntries.map((entry) => masteryPercent(progress.mastery[shortcutId(entry)]))) * 0.5))
   }
   if (stage.id === 'later-1000') return average(characters.slice(500).map((entry) => masteryPercent(progress.mastery[characterId(entry)])))
   const sessions = progress.sessions.filter((session) => session.stageId === stage.id)

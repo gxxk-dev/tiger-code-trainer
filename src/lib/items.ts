@@ -11,6 +11,11 @@ export function characterId(character: CharacterEntry): string {
   return `char:${character.char}`
 }
 
+export function shortcutId(character: CharacterEntry | string): string {
+  const id = typeof character === 'string' ? character : characterId(character)
+  return `shortcut:${id}`
+}
+
 export function splitId(split: SplitEntry): string {
   return `split:${split.char}`
 }
@@ -34,7 +39,7 @@ export function weakItemIds(progress: ProgressState): string[] {
 }
 
 function isReviewableId(id: string): boolean {
-  return id.startsWith('root:') || id.startsWith('char:') || id.startsWith('split:')
+  return id.startsWith('root:') || id.startsWith('char:') || id.startsWith('split:') || id.startsWith('shortcut:')
 }
 
 export function newRootIds(progress: ProgressState, count: number): string[] {
@@ -64,6 +69,10 @@ export function resolveCharacter(id: string): CharacterEntry | undefined {
   return characters.find((character) => characterId(character) === id)
 }
 
+export function resolveShortcut(id: string): CharacterEntry | undefined {
+  return id.startsWith('shortcut:') ? resolveCharacter(id.slice('shortcut:'.length)) : undefined
+}
+
 export function resolveSplit(id: string): SplitEntry | undefined {
   return splitExamples.find((split) => splitId(split) === id)
     ?? requiredSplits.find((split) => splitId(split) === id)
@@ -74,6 +83,8 @@ export function getItemLabel(id: string): { glyph: string; detail: string } {
   if (root) return { glyph: displayRootGlyph(root.root, root.code), detail: `字根 ${root.code}` }
   const character = resolveCharacter(id)
   if (character) return { glyph: character.char, detail: `全码 ${character.code}` }
+  const shortcut = resolveShortcut(id)
+  if (shortcut) return { glyph: shortcut.char, detail: `简码 ${shortcut.short ?? shortcut.code}` }
   const split = resolveSplit(id)
   if (split) return { glyph: split.char, detail: split.roots.join(' + ') }
   return { glyph: '？', detail: id }

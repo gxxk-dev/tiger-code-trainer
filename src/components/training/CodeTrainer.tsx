@@ -1,22 +1,25 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { ArrowRight, Check, Eye, Lightbulb, XCircle } from 'lucide-react'
 import clsx from 'clsx'
-import { orderedRoots, splitExamples } from '../../data/curriculum'
+import { orderedRoots } from '../../data/curriculum'
 import { characters } from '../../data/characters.generated'
-import { requiredSplits } from '../../data/splits.generated'
 import {
   characterId,
   displayRootGlyph,
   resolveCharacter,
   resolveRoot,
+  resolveShortcut,
   resolveSplit,
   rootId,
+  shortcutId,
 } from '../../lib/items'
 import { getRootMemoryHint } from '../../lib/rootHints'
-import type { FeedbackState, ProgressState, TrainingRequest } from '../../types'
+import { resolveSplitRootCodes } from '../../lib/splitEncoding'
+import type { FeedbackState, ProgressState, SplitEntry, TrainingRequest } from '../../types'
 import { Button } from '../ui/Button'
 import { ProgressBar } from '../ui/ProgressBar'
 import { MemoryHint } from './MemoryHint'
+import { SplitEncodingProcess } from './SplitEncodingProcess'
 import type { TrainingAnswerHandler, TrainingFinishedHandler } from './types'
 
 interface CodeQuestion {
@@ -28,6 +31,7 @@ interface CodeQuestion {
   hint: string
   concealLength: boolean
   roots?: Array<{ glyph: string; code: string }>
+  split?: SplitEntry
   retry?: boolean
 }
 
@@ -305,10 +309,13 @@ function FeedbackPanel({
         <div className="min-w-0 flex-1">
           <p className="font-medium text-zinc-950 dark:text-white">{correct ? '正确' : hinted ? '借提示答对，本题不计掌握' : `你的输入：${input || '未作答'}`}</p>
           <p className="mt-1 text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">正确编码：<span className="font-mono font-semibold text-zinc-950 dark:text-white">{question.expected}</span>。{question.explanation}</p>
-          {!correct ? (
+          {question.split ? (
+            <SplitEncodingProcess split={question.split} className="mt-3 border-t border-zinc-950/8 pt-3 dark:border-white/8" />
+          ) : null}
+          {!correct && !question.split ? (
             <MemoryHint text={question.hint} className="mt-3 border-t border-zinc-950/8 pt-3 dark:border-white/8" />
           ) : null}
-          {question.roots?.length ? (
+          {question.roots?.length && !question.split ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {question.roots.map((root, index) => (
                 <span key={`${root.glyph}-${index}`} className="rounded-md bg-white/70 px-2 py-1 font-root text-sm text-zinc-700 ring-1 ring-zinc-950/8 dark:bg-white/6 dark:text-zinc-200 dark:ring-white/8">
@@ -333,8 +340,8 @@ function buildCodeQuestions(request: TrainingRequest, progress: ProgressState): 
         id: rootId(root),
         glyph: displayRootGlyph(root.root, root.code),
         expected: root.code,
-        eyebrow: '字根认码',
-        explanation: root.examples.length ? `例字：${root.examples.join('、')}。` : '把两个字母作为一个整体记忆。',
+        eyebrow: '完整字根 · 输入根码',
+        explanation: `这是完整字根，不再拆。大码 ${root.code[0].toUpperCase()} + 小码 ${root.code[1]}，依次输入 ${root.code}。${root.examples.length ? `可在这些字里找到它：${root.examples.join('、')}。` : ''}`,
         hint: hint.mnemonic,
         concealLength: false,
         roots: [{ glyph: root.root, code: root.code }],
@@ -354,12 +361,14 @@ function buildCodeQuestions(request: TrainingRequest, progress: ProgressState): 
           glyph: displayRootGlyph(root.root, root.code),
           expected: root.code,
           eyebrow: '到期字根',
-          explanation: root.examples.length ? `例字：${root.examples.join('、')}。` : '完整回忆大码和小码。',
+          explanation: `这是完整字根，不再拆。大码 ${root.code[0].toUpperCase()} + 小码 ${root.code[1]}，依次输入 ${root.code}。${root.examples.length ? `可在这些字里找到它：${root.examples.join('、')}。` : ''}`,
           hint: hint.mnemonic,
           concealLength: false,
           roots: [{ glyph: root.root, code: root.code }],
         } satisfies CodeQuestion]
       }
+      const shortcut = resolveShortcut(id)
+      if (shortcut) return [characterQuestion(shortcut, true)]
       const character = resolveCharacter(id)
       if (character) return [characterQuestion(character, request.stageId === 'shortcuts')]
       const split = resolveSplit(id)
@@ -371,7 +380,8 @@ function buildCodeQuestions(request: TrainingRequest, progress: ProgressState): 
         explanation: split.note,
         hint: `先按书写顺序想出 ${split.roots.map((glyph) => displayRootGlyph(glyph)).join(' + ')}，再套取码公式。`,
         concealLength: true,
-        roots: split.roots.map((glyph) => ({ glyph, code: '' })),
+        roots: split.roots.map((glyph, index) => ({ glyph, code: resolveSplitRootCodes(split)[index] })),
+        split,
       } satisfies CodeQuestion]
       return []
     })
@@ -380,10 +390,10 @@ function buildCodeQuestions(request: TrainingRequest, progress: ProgressState): 
 }
 
 function characterQuestion(character: (typeof characters)[number], useShortcut: boolean): CodeQuestion {
-  const split = requiredSplits.find((entry) => entry.char === character.char) ?? splitExamples.find((entry) => entry.char === character.char)
+  const split = resolveSplit(`split:${character.char}`)
   const expected = useShortcut && character.short ? character.short : character.code
   return {
-    id: characterId(character),
+    id: useShortcut ? shortcutId(character) : characterId(character),
     glyph: character.char,
     expected,
     eyebrow: useShortcut ? '高频简码' : `常用字 #${character.rank}`,
@@ -392,6 +402,7 @@ function characterQuestion(character: (typeof characters)[number], useShortcut: 
       ? `先回忆全码 ${character.code}；这个高频字可缩短为简码。`
       : split ? `先拆成 ${split.roots.map((glyph) => displayRootGlyph(glyph)).join(' + ')}，再按取码公式组合。` : '先回忆它的完整拆分，再取前三根和末根。',
     concealLength: true,
-    roots: split?.roots.map((glyph, index) => ({ glyph, code: split.note.match(/[A-Za-z]{2}/g)?.[index]?.toLowerCase() ?? '' })),
+    roots: split?.roots.map((glyph, index) => ({ glyph, code: resolveSplitRootCodes(split)[index] })),
+    split,
   }
 }

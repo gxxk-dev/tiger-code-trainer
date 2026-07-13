@@ -4,8 +4,11 @@ import clsx from 'clsx'
 import {
   articles,
   basicStrokes,
+  orderedRoots,
   ruleLabels,
+  splitExamples,
 } from '../../data/curriculum'
+import { requiredSplits } from '../../data/splits.generated'
 import {
   displayRootGlyph,
   resolveCharacter,
@@ -15,9 +18,11 @@ import {
 } from '../../lib/items'
 import { lessonIdsForRequest, sourceItemId } from '../../lib/lessons'
 import { getRootMemoryHint } from '../../lib/rootHints'
-import type { ProgressState, TrainingRequest } from '../../types'
+import { splitUsesAnyRoot, splitUsesOnlyRoots } from '../../lib/splitEncoding'
+import type { ProgressState, RootEntry, SplitEntry, TrainingRequest } from '../../types'
 import { Button } from '../ui/Button'
 import { MemoryHint } from './MemoryHint'
+import { SplitEncodingProcess } from './SplitEncodingProcess'
 
 interface LessonPrimerProps {
   request: TrainingRequest
@@ -27,11 +32,15 @@ interface LessonPrimerProps {
 
 interface LessonItem {
   id: string
+  kind: 'root' | 'character' | 'split'
   glyph: string
   label: string
   code: string
   detail: string
   hint?: string
+  variants?: string
+  examples?: string[]
+  split?: SplitEntry
 }
 
 export function LessonPrimer({ request, progress, onComplete }: LessonPrimerProps) {
@@ -51,18 +60,28 @@ export function LessonPrimer({ request, progress, onComplete }: LessonPrimerProp
 
   const items = buildLessonItems(lessonIds, request)
   if (request.kind === 'splits') {
-    return <SplitLesson items={items} headingRef={headingRef} onComplete={() => onComplete(lessonIds)} />
+    return <SplitLesson items={items} headingRef={headingRef} onComplete={() => onComplete(lessonIds.slice(0, 1))} />
   }
-  return <CodeLesson items={items} headingRef={headingRef} onComplete={() => onComplete(lessonIds)} />
+  return <CodeLesson
+    items={items}
+    headingRef={headingRef}
+    knownRoots={orderedRoots.filter((root) => progress.learned[rootId(root)] || progress.mastery[rootId(root)])}
+    showRootApplication={request.stageId !== 'strokes'}
+    onComplete={() => onComplete(lessonIds)}
+  />
 }
 
 function CodeLesson({
   items,
   headingRef,
+  knownRoots,
+  showRootApplication,
   onComplete,
 }: {
   items: LessonItem[]
   headingRef: React.RefObject<HTMLHeadingElement | null>
+  knownRoots: RootEntry[]
+  showRootApplication: boolean
   onComplete: () => void
 }) {
   const [phase, setPhase] = useState<'look' | 'copy'>('look')
@@ -70,6 +89,8 @@ function CodeLesson({
   const [value, setValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const item = items[index]
+  const isRootLesson = items.every((lessonItem) => lessonItem.kind === 'root')
+  const applicationSplit = isRootLesson && showRootApplication ? findApplicationSplit(items, knownRoots) : undefined
 
   useEffect(() => {
     if (phase === 'copy') inputRef.current?.focus()
@@ -82,11 +103,41 @@ function CodeLesson({
       <main className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-4xl content-center gap-8 px-4 py-10 sm:px-6 lg:px-8">
         <header className="max-w-2xl">
           <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">第 1 步 / 3 · 认识</p>
-          <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl font-semibold text-balance text-zinc-950 outline-none dark:text-white">先看答案，不测试</h1>
+          <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl font-semibold text-balance text-zinc-950 outline-none dark:text-white">
+            {isRootLesson ? '先认识完整字根和根码' : '先看答案，不测试'}
+          </h1>
           <p className="mt-3 max-w-[58ch] text-base text-pretty text-zinc-600 dark:text-zinc-400">
-            这轮只学 {items.length} 个。把字形、编码和学习联想一起看一遍；联想不是额外规则，现在也不用背熟。
+            {isRootLesson
+              ? `这轮只学 ${items.length} 个拆字零件。卡片左边的大字就是完整字根，不是待拆汉字；现在记它自己的两字母根码。`
+              : `这轮只学 ${items.length} 个。把字形、编码和学习联想一起看一遍；联想不是额外规则，现在也不用背熟。`}
           </p>
         </header>
+
+        {isRootLesson ? (
+          <div role="note" aria-label="字根说明" className="border-y border-zinc-950/8 py-4 dark:border-white/8">
+            <p className="font-medium text-zinc-950 dark:text-white">完整字根不再往下拆。</p>
+            <p className="mt-1 max-w-[62ch] text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">
+              这里输入的不是字根字形，而是它的字母码：先按大码，再按小码。遇到完整汉字时，才把整字拆成这些字根并套取码公式。
+            </p>
+          </div>
+        ) : null}
+
+        {applicationSplit ? (
+          <section aria-labelledby="root-application-title" className="grid gap-4 border-y border-zinc-950/8 py-5 dark:border-white/8">
+            <div>
+              <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">马上用进一个整字</p>
+              <h2 id="root-application-title" className="mt-1 text-xl font-semibold text-balance text-zinc-950 dark:text-white">看一遍完整拆字过程</h2>
+            </div>
+            <SplitEncodingProcess split={applicationSplit} />
+          </section>
+        ) : null}
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="primary" leadingIcon={<Keyboard className="size-4" aria-hidden="true" />} onClick={() => setPhase('copy')}>
+            {isRootLesson ? '跟着根码打一次' : '跟着答案打一次'}
+          </Button>
+          <Button variant="ghost" onClick={onComplete}>我已经会了，直接练习</Button>
+        </div>
 
         <ul role="list" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((lessonItem) => (
@@ -95,7 +146,20 @@ function CodeLesson({
               <div className="min-w-0">
                 <span className="block text-base font-medium text-zinc-500 sm:text-sm dark:text-zinc-400">{lessonItem.label}</span>
                 <span className="mt-1 block font-mono text-2xl font-semibold text-brand-700 dark:text-brand-300">{lessonItem.code}</span>
-                <span className="mt-2 block text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">{lessonItem.detail}</span>
+                {lessonItem.kind === 'root' ? (
+                  <div className="mt-2 grid gap-1.5 text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">
+                    <p>
+                      大码 <span className="font-mono font-semibold text-zinc-950 dark:text-white">{lessonItem.code[0].toUpperCase()}</span>
+                      {' + '}小码 <span className="font-mono font-semibold text-zinc-950 dark:text-white">{lessonItem.code[1]}</span>
+                      {' → '}输入 <span className="font-mono font-semibold text-zinc-950 dark:text-white">{lessonItem.code}</span>
+                    </p>
+                    {visibleVariants(lessonItem.variants).length ? <p className="font-root">常见变形：{visibleVariants(lessonItem.variants).join(' ')}</p> : null}
+                    {lessonItem.examples?.length ? <p className="font-root">可在这些字里找它：{lessonItem.examples.join(' · ')}</p> : null}
+                    <p>{lessonItem.detail}</p>
+                  </div>
+                ) : (
+                  <span className="mt-2 block text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">{lessonItem.detail}</span>
+                )}
                 {lessonItem.hint ? (
                   <MemoryHint text={lessonItem.hint} className="mt-3 border-t border-zinc-950/8 pt-3 dark:border-white/8" />
                 ) : null}
@@ -103,13 +167,6 @@ function CodeLesson({
             </li>
           ))}
         </ul>
-
-        <div className="flex flex-wrap gap-2">
-          <Button variant="primary" leadingIcon={<Keyboard className="size-4" aria-hidden="true" />} onClick={() => setPhase('copy')}>
-            跟着答案打一次
-          </Button>
-          <Button variant="ghost" onClick={onComplete}>我已经会了，直接练习</Button>
-        </div>
       </main>
     )
   }
@@ -129,8 +186,12 @@ function CodeLesson({
     <main className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-3xl content-center gap-8 px-4 py-10 sm:px-6 lg:px-8">
       <header>
         <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">第 2 步 / 3 · 跟打 {index + 1} / {items.length}</p>
-        <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl font-semibold text-balance text-zinc-950 outline-none dark:text-white">答案一直显示，照着输入</h1>
-        <p className="mt-3 text-base text-zinc-600 dark:text-zinc-400">跟打不计分。最后一步才会遮住答案。</p>
+        <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl font-semibold text-balance text-zinc-950 outline-none dark:text-white">
+          {item.kind === 'root' ? '完整字根不再拆，照着输入根码' : '答案一直显示，照着输入'}
+        </h1>
+        <p className="mt-3 text-base text-zinc-600 dark:text-zinc-400">
+          {item.kind === 'root' ? '先大码、后小码。跟打不计分，最后一步才会遮住答案。' : '跟打不计分。最后一步才会遮住答案。'}
+        </p>
       </header>
 
       <section aria-labelledby="copy-glyph" className="grid min-h-80 content-center justify-items-center gap-6 text-center">
@@ -138,11 +199,22 @@ function CodeLesson({
           <p id="copy-glyph" className="font-root text-7xl font-medium text-zinc-950 sm:text-8xl dark:text-white">{displayRootGlyph(item.glyph)}</p>
           <p className="mt-2 text-base font-medium text-zinc-600 dark:text-zinc-300">{item.label}</p>
         </div>
-        <div className="flex justify-center gap-2" aria-label={`答案 ${item.code}`}>
-          {Array.from(item.code).map((character, codeIndex) => (
-            <span key={`${character}-${codeIndex}`} className="flex size-12 items-center justify-center rounded-md bg-blue-500/8 font-mono text-xl font-semibold text-blue-800 ring-1 ring-blue-500/20 dark:text-blue-200">{character}</span>
-          ))}
-        </div>
+        {item.kind === 'root' ? (
+          <dl className="grid grid-cols-2 gap-2" aria-label={`根码 ${item.code}`}>
+            {Array.from(item.code).map((character, codeIndex) => (
+              <div key={`${character}-${codeIndex}`} className="grid justify-items-center gap-1">
+                <dt className="text-base text-zinc-500 sm:text-sm dark:text-zinc-400">{codeIndex === 0 ? '大码' : '小码'}</dt>
+                <dd className="flex size-12 items-center justify-center rounded-md bg-blue-500/8 font-mono text-xl font-semibold text-blue-800 ring-1 ring-blue-500/20 dark:text-blue-200">{codeIndex === 0 ? character.toUpperCase() : character}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <div className="flex justify-center gap-2" aria-label={`答案 ${item.code}`}>
+            {Array.from(item.code).map((character, codeIndex) => (
+              <span key={`${character}-${codeIndex}`} className="flex size-12 items-center justify-center rounded-md bg-blue-500/8 font-mono text-xl font-semibold text-blue-800 ring-1 ring-blue-500/20 dark:text-blue-200">{character}</span>
+            ))}
+          </div>
+        )}
         {item.hint ? (
           <MemoryHint text={item.hint} className="max-w-lg text-left" />
         ) : null}
@@ -220,22 +292,21 @@ function SplitLesson({ items, headingRef, onComplete }: { items: LessonItem[]; h
     <main className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-4xl content-center gap-8 px-4 py-10 sm:px-6 lg:px-8">
       <header className="max-w-2xl">
         <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">先看示范 · 不测试</p>
-        <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl font-semibold text-balance text-zinc-950 outline-none dark:text-white">先看怎么拆，再自己选择</h1>
-        <p className="mt-3 text-base text-pretty text-zinc-600 dark:text-zinc-400">先认完整的大字根，再按书写顺序排列。下面就是本轮会遇到的答案。</p>
+        <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl font-semibold text-balance text-zinc-950 outline-none dark:text-white">看懂汉字怎样一步步变成全码</h1>
+        <p className="mt-3 text-base text-pretty text-zinc-600 dark:text-zinc-400">
+          一次只学一个字：先拆成有顺序的字根，再查每根的两字母根码，最后套取码公式。看完后只练这个字，不需要输入字根字形。
+        </p>
       </header>
-      <ul role="list" className="divide-y divide-zinc-950/8 border-y border-zinc-950/8 dark:divide-white/8 dark:border-white/8">
-        {items.map((item) => (
-          <li key={item.id} className="grid grid-cols-[3rem_1fr_auto] items-start gap-4 py-4">
-            <span className="font-root text-3xl font-medium text-zinc-950 dark:text-white">{item.glyph}</span>
-            <span className="min-w-0">
-              <span className="block font-root text-base font-medium text-zinc-950 dark:text-white">{item.detail}</span>
-              <span className="mt-1 block text-base text-zinc-500 sm:text-sm dark:text-zinc-400">{item.label}</span>
-            </span>
-            <span className="font-mono text-base font-semibold text-brand-700 dark:text-brand-300">{item.code}</span>
+      <ul role="list" className="border-y border-zinc-950/8 dark:border-white/8">
+        {items.slice(0, 1).map((item) => (
+          <li key={item.id} className="py-5">
+            {item.split ? <SplitEncodingProcess split={item.split} /> : null}
           </li>
         ))}
       </ul>
-      <Button variant="primary" className="w-fit" trailingIcon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={onComplete}>开始拆分练习</Button>
+      <div>
+        <Button variant="primary" className="w-fit" trailingIcon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={onComplete}>看完过程，开始选字根</Button>
+      </div>
     </main>
   )
 }
@@ -259,7 +330,7 @@ function ArticleLesson({ request, headingRef, onComplete }: { request: TrainingR
 }
 
 function buildLessonItems(itemIds: string[], request: TrainingRequest): LessonItem[] {
-  return itemIds.flatMap((id) => {
+  return itemIds.flatMap<LessonItem>((id): LessonItem[] => {
     const sourceId = sourceItemId(id)
     const root = resolveRoot(sourceId)
     if (root) {
@@ -267,11 +338,14 @@ function buildLessonItems(itemIds: string[], request: TrainingRequest): LessonIt
       const hint = getRootMemoryHint(root)
       return [{
         id,
+        kind: 'root',
         glyph: root.root,
-        label: stroke?.name ?? '字根',
+        label: stroke ? `基本笔画 · ${stroke.name}` : '完整字根 · 不再拆',
         code: root.code,
         detail: hint.compactCue,
         hint: hint.mnemonic,
+        variants: root.variants,
+        examples: root.examples,
       }]
     }
     const character = resolveCharacter(sourceId)
@@ -280,6 +354,7 @@ function buildLessonItems(itemIds: string[], request: TrainingRequest): LessonIt
       const shortcut = request.stageId === 'shortcuts' ? character.short : undefined
       return [{
         id,
+        kind: 'character',
         glyph: character.char,
         label: shortcut ? '高频简码' : `常用字 #${character.rank}`,
         code: shortcut ?? character.code,
@@ -292,12 +367,37 @@ function buildLessonItems(itemIds: string[], request: TrainingRequest): LessonIt
     if (split) {
       return [{
         id,
+        kind: 'split',
         glyph: split.char,
         label: split.rule ? ruleLabels[split.rule] : '按书写顺序',
         code: split.code,
         detail: split.roots.map((glyph) => displayRootGlyph(glyph)).join(' + '),
+        split,
       }]
     }
     return []
   })
+}
+
+function findApplicationSplit(items: LessonItem[], previouslyLearnedRoots: RootEntry[]): SplitEntry | undefined {
+  const currentRoots = items.flatMap((item) => resolveRoot(sourceItemId(item.id)) ?? [])
+  const knownRoots = [...previouslyLearnedRoots, ...currentRoots]
+  const preferred = new Map(['休', '扣', '什', '百', '么'].map((char, index) => [char, index]))
+  const candidates = [...splitExamples, ...requiredSplits]
+    .filter((split) => split.roots.length >= 2 && split.roots.length <= 3)
+    .filter((split) => splitUsesOnlyRoots(split, knownRoots))
+  const applicable = candidates.filter((split) => splitUsesAnyRoot(split, currentRoots))
+  return (applicable.length ? applicable : candidates)
+    .sort((left, right) => {
+      const leftPriority = preferred.get(left.char) ?? 999
+      const rightPriority = preferred.get(right.char) ?? 999
+      return leftPriority - rightPriority || left.roots.length - right.roots.length
+    })[0]
+}
+
+function visibleVariants(variants?: string): string[] {
+  return Array.from(variants ?? '').filter((glyph) => {
+    const point = glyph.codePointAt(0) ?? 0
+    return point < 0xe000 || point > 0xf8ff
+  }).slice(0, 8)
 }

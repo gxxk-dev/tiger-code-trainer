@@ -32,6 +32,7 @@ export function TrainingSession({
   const [result, setResult] = useState<SessionResult | null>(null)
   const [paused, setPaused] = useState(false)
   const [learning, setLearning] = useState(() => shouldShowLesson(request, progress))
+  const [practiceItemIds, setPracticeItemIds] = useState(request.itemIds)
   const sessionStartedAt = useRef(Date.now())
 
   useEffect(() => {
@@ -63,9 +64,14 @@ export function TrainingSession({
 
   const beginPractice = (itemIds: string[]) => {
     onLearned(itemIds)
+    if (request.kind === 'splits') setPracticeItemIds(itemIds)
     sessionStartedAt.current = Date.now()
     setLearning(false)
   }
+
+  const practiceRequest = request.kind === 'splits'
+    ? { ...request, itemIds: practiceItemIds }
+    : request
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-canvas text-zinc-950 dark:bg-canvas-dark dark:text-zinc-100" role="dialog" aria-modal="true" aria-labelledby="training-title">
@@ -103,7 +109,7 @@ export function TrainingSession({
       ) : request.kind === 'formula' ? (
         <FormulaTrainer onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} />
       ) : request.kind === 'splits' ? (
-        <SplitTrainer request={request} onAnswer={onAnswer} onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} />
+        <SplitTrainer request={practiceRequest} onAnswer={onAnswer} onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} />
       ) : (
         <CodeTrainer request={request} progress={progress} onAnswer={onAnswer} onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} />
       )}

@@ -1,12 +1,14 @@
 import { useMemo, useRef, useState } from 'react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Eye } from 'lucide-react'
 import clsx from 'clsx'
 import { splitExamples } from '../../data/curriculum'
 import { requiredSplits } from '../../data/splits.generated'
-import { displayRootGlyph, resolveSplit, splitId } from '../../lib/items'
+import { resolveSplit, splitId } from '../../lib/items'
+import { displaySplitRootGlyph, resolveSplitRootCodes } from '../../lib/splitEncoding'
 import type { TrainingRequest } from '../../types'
 import { Button } from '../ui/Button'
 import { ProgressBar } from '../ui/ProgressBar'
+import { SplitEncodingProcess } from './SplitEncodingProcess'
 import type { TrainingAnswerHandler, TrainingFinishedHandler } from './types'
 
 interface SplitTrainerProps {
@@ -22,6 +24,7 @@ export function SplitTrainer({ request, onAnswer, onFinished, className }: Split
   const [queue, setQueue] = useState(initial)
   const [index, setIndex] = useState(0)
   const [selected, setSelected] = useState('')
+  const [guided, setGuided] = useState(false)
   const [attempted, setAttempted] = useState(0)
   const [correct, setCorrect] = useState(0)
   const [firstTryCorrect, setFirstTryCorrect] = useState(0)
@@ -34,20 +37,22 @@ export function SplitTrainer({ request, onAnswer, onFinished, className }: Split
     return [question, ...distractors].sort((left, right) => `${left.char}${index}`.localeCompare(`${right.char}${index}`))
   }, [index, pool, question])
 
-  const choose = (char: string) => {
+  const choose = (char: string, usedHint = false) => {
     if (!question || selected) return
     const isCorrect = char === question.char
     const responseMs = Date.now() - startedAt.current
     setSelected(char)
+    setGuided(usedHint)
     setAttempted((value) => value + 1)
-    if (isCorrect) {
+    if (isCorrect && !usedHint) {
       setCorrect((value) => value + 1)
-      setFirstTryCorrect((value) => value + 1)
-    } else if (!queue[index].note.startsWith('重试')) {
+      if (!question.note.startsWith('重试')) setFirstTryCorrect((value) => value + 1)
+    }
+    if ((!isCorrect || usedHint) && !question.note.startsWith('重试')) {
       setQueue((items) => [...items, { ...question, note: `重试：${question.note}` }])
     }
     setResponseTimes((values) => [...values, responseMs])
-    onAnswer(splitId(question), isCorrect, responseMs, false)
+    onAnswer(splitId(question), isCorrect, responseMs, usedHint)
   }
 
   const next = () => {
@@ -57,6 +62,7 @@ export function SplitTrainer({ request, onAnswer, onFinished, className }: Split
     }
     setIndex((value) => value + 1)
     setSelected('')
+    setGuided(false)
     startedAt.current = Date.now()
   }
 
@@ -69,9 +75,10 @@ export function SplitTrainer({ request, onAnswer, onFinished, className }: Split
       </div>
       <section className="grid min-h-80 content-center justify-items-center gap-8">
         <p className="font-root text-8xl font-medium text-zinc-950 dark:text-white">{question.char}</p>
-        <div className="grid w-full gap-2 sm:grid-cols-2">
+        <div className="grid w-full gap-2 sm:grid-cols-2" role="group" aria-label={`为“${question.char}”选择拆分`}>
           {options.map((option) => {
             const optionValue = option.roots.join(' + ')
+            const optionRootCodes = resolveSplitRootCodes(option)
             const revealCorrect = selected && option.char === question.char
             const revealWrong = selected === option.char && option.char !== question.char
             return (
@@ -79,6 +86,7 @@ export function SplitTrainer({ request, onAnswer, onFinished, className }: Split
                 type="button"
                 key={`${option.char}-${optionValue}`}
                 onClick={() => choose(option.char)}
+                aria-pressed={selected === option.char}
                 className={clsx(
                   'min-h-14 rounded-md bg-white p-3 text-left font-root text-base font-medium text-zinc-800 ring-1 ring-zinc-950/10 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 dark:bg-white/5 dark:text-zinc-200 dark:ring-white/10',
                   revealCorrect ? 'ring-emerald-500/50' : '',
@@ -87,7 +95,7 @@ export function SplitTrainer({ request, onAnswer, onFinished, className }: Split
               >
                 {option.roots.map((root, rootIndex) => (
                   <span key={`${root}-${rootIndex}`}>
-                    {rootIndex ? ' + ' : ''}{displayRootGlyph(root, option.note.match(/[A-Za-z]{2}/g)?.[rootIndex])}
+                    {rootIndex ? ' + ' : ''}{displaySplitRootGlyph(root, optionRootCodes[rootIndex])}
                   </span>
                 ))}
               </button>
@@ -98,12 +106,22 @@ export function SplitTrainer({ request, onAnswer, onFinished, className }: Split
       <div className="min-h-28" aria-live="polite">
         {selected ? (
           <div className={clsx('rounded-lg p-4 ring-1', selected === question.char ? 'bg-emerald-500/8 ring-emerald-500/20' : 'bg-red-500/8 ring-red-500/20')}>
-            <p className="font-medium text-zinc-950 dark:text-white">{selected === question.char ? '拆分正确' : `正确拆分：${question.roots.map((root, rootIndex) => displayRootGlyph(root, question.note.match(/[A-Za-z]{2}/g)?.[rootIndex])).join(' + ')}`}</p>
-            <p className="mt-1 text-base text-zinc-600 sm:text-sm dark:text-zinc-300">全码 <span className="font-mono font-semibold text-zinc-950 dark:text-white">{question.code}</span>。{question.note.replace(/^重试：/, '')}</p>
+            <p className="font-medium text-zinc-950 dark:text-white">
+              {selected === question.char
+                ? guided
+                  ? '已带你拆完，本题不计掌握'
+                  : `${question.char} = ${question.roots.map((root, rootIndex) => displaySplitRootGlyph(root, resolveSplitRootCodes(question)[rootIndex])).join(' + ')}，拆分正确`
+                : `正确拆分：${question.char} = ${question.roots.map((root, rootIndex) => displaySplitRootGlyph(root, resolveSplitRootCodes(question)[rootIndex])).join(' + ')}`}
+            </p>
+            <SplitEncodingProcess split={question} className="mt-4 border-t border-zinc-950/8 pt-4 dark:border-white/8" />
           </div>
         ) : null}
       </div>
-      {selected ? <div className="flex justify-center"><Button variant="primary" trailingIcon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={next}>下一题</Button></div> : null}
+      {selected ? (
+        <div className="flex justify-center"><Button variant="primary" trailingIcon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={next}>下一题</Button></div>
+      ) : (
+        <div className="flex justify-center"><Button variant="ghost" leadingIcon={<Eye className="size-4" aria-hidden="true" />} onClick={() => choose(question.char, true)}>我不会，带我拆这题</Button></div>
+      )}
     </main>
   )
 }
