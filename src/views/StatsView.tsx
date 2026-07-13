@@ -31,7 +31,7 @@ export function StatsView({ progress, onStart }: StatsViewProps) {
     <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
       <header className="flex flex-col gap-5 border-b border-zinc-950/8 pb-8 sm:flex-row sm:items-end sm:justify-between dark:border-white/8">
         <div>
-          <p className="font-mono text-sm font-medium text-emerald-700 dark:text-emerald-300">训练统计</p>
+          <p className="font-mono text-sm font-medium text-emerald-700 dark:text-emerald-300">学习轨迹</p>
           <h1 className="mt-2 max-w-[20ch] text-3xl font-semibold text-balance text-zinc-950 sm:text-4xl dark:text-white">速度和准确率分开看</h1>
           <p className="mt-3 max-w-[56ch] text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-400">编码训练与真实中文输入分别记录，不用一个总分掩盖问题。</p>
         </div>

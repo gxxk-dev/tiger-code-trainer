@@ -1,4 +1,5 @@
 import type { AppSettings, MasteryRecord, ProgressState, SessionRecord } from '../types'
+import { getIntensityProfile } from './intensity'
 
 export const STORAGE_KEY = 'tiger-flow-progress-v1'
 
@@ -7,13 +8,14 @@ export function createInitialProgress(): ProgressState {
     version: 2,
     createdAt: Date.now(),
     onboardingComplete: false,
+    completedStages: {},
     learned: {},
     mastery: {},
     sessions: [],
     settings: {
       theme: 'system',
       dailyMinutes: 10,
-      newItemsPerRound: 5,
+      newItemsPerRound: 8,
       autoAdvance: true,
       autoAdvanceDelay: 700,
       reducedMotion: false,
@@ -37,6 +39,7 @@ export function migrateProgress(value: unknown): ProgressState | null {
     version?: number
     createdAt?: number
     onboardingComplete?: boolean
+    completedStages?: Record<string, number>
     learned?: Record<string, number>
     mastery?: Record<string, MasteryRecord>
     sessions?: SessionRecord[]
@@ -49,18 +52,36 @@ export function migrateProgress(value: unknown): ProgressState | null {
     ? candidate.learned
     : Object.fromEntries(Object.entries(mastery).map(([id, record]) => [id, record.lastSeenAt || Date.now()]))
 
+  const settings = {
+    ...createInitialProgress().settings,
+    ...candidate.settings,
+  }
+  const dailyMinutes = settings.dailyMinutes === 5 || settings.dailyMinutes === 10 || settings.dailyMinutes === 20
+    ? settings.dailyMinutes
+    : 10
+
+  const sessions = Array.isArray(candidate.sessions) ? candidate.sessions : []
+  const onboardingComplete = typeof candidate.onboardingComplete === 'boolean'
+    ? candidate.onboardingComplete
+    : Object.keys(mastery).length > 0 || sessions.length > 0
+  const completedStages = { ...candidate.completedStages }
+  for (const session of sessions) {
+    if (session.stageId) completedStages[session.stageId] = session.finishedAt
+  }
+  if (onboardingComplete && !completedStages.strokes) completedStages.strokes = candidate.createdAt ?? Date.now()
+
   return {
     version: 2,
     createdAt: typeof candidate.createdAt === 'number' ? candidate.createdAt : Date.now(),
-    onboardingComplete: typeof candidate.onboardingComplete === 'boolean'
-      ? candidate.onboardingComplete
-      : Object.keys(mastery).length > 0 || (candidate.sessions?.length ?? 0) > 0,
+    onboardingComplete,
+    completedStages,
     learned,
     mastery,
-    sessions: Array.isArray(candidate.sessions) ? candidate.sessions : [],
+    sessions,
     settings: {
-      ...createInitialProgress().settings,
-      ...candidate.settings,
+      ...settings,
+      dailyMinutes,
+      newItemsPerRound: getIntensityProfile(dailyMinutes).newItems,
     },
   }
 }

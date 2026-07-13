@@ -10,13 +10,17 @@ interface CompletionViewProps {
   request: TrainingRequest
   result: SessionResult
   onClose: () => void
+  onContinue?: () => void
+  continueLabel?: string
   className?: string
 }
 
-export function CompletionView({ request, result, onClose, className }: CompletionViewProps) {
+export function CompletionView({ request, result, onClose, onContinue, continueLabel, className }: CompletionViewProps) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const accuracy = Math.round(result.correct / Math.max(1, result.attempted) * 100)
-  const nextStep = request.stageId === 'strokes'
+  const nextStep = request.origin === 'daily'
+    ? ''
+    : request.stageId === 'strokes'
     ? '下一步：学习一条取码公式。'
     : request.stageId === 'formula'
       ? '下一步：每次认识 5 个常用字根。'
@@ -43,7 +47,9 @@ export function CompletionView({ request, result, onClose, className }: Completi
         <ResultStat label={result.charsPerMinute ? '字 / 分' : '中位反应'} value={result.charsPerMinute ? `${result.charsPerMinute}` : result.responseTimes.length ? `${(median(result.responseTimes) / 1000).toFixed(1)}s` : '—'} />
       </dl>
       <div className="flex justify-center">
-        <Button variant="primary" onClick={onClose}>{nextStep ? '继续下一步' : '返回学习页'}</Button>
+        <Button variant="primary" onClick={onContinue ?? onClose}>
+          {continueLabel ?? (nextStep ? '继续下一步' : '返回学习页')}
+        </Button>
       </div>
     </main>
   )

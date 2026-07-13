@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AppSettings, ProgressState, SessionRecord } from '../types'
 import { updateMastery } from '../lib/mastery'
+import { settingsForIntensity } from '../lib/intensity'
 import {
   createInitialProgress,
   importProgress,
@@ -39,23 +40,32 @@ export function useProgress() {
     setProgress((current) => ({
       ...current,
       onboardingComplete: current.onboardingComplete || session.stageId === 'strokes',
+      completedStages: session.stageId
+        ? { ...current.completedStages, [session.stageId]: session.finishedAt }
+        : current.completedStages,
       sessions: [...current.sessions, session].slice(-500),
     }))
   }, [])
 
   const skipOnboarding = useCallback(() => {
-    setProgress((current) => ({ ...current, onboardingComplete: true }))
+    setProgress((current) => ({
+      ...current,
+      onboardingComplete: true,
+      completedStages: { ...current.completedStages, strokes: Date.now() },
+    }))
   }, [])
 
   const markLearned = useCallback((itemIds: string[]) => {
     if (!itemIds.length) return
     setProgress((current) => {
       const learnedAt = Date.now()
+      const newIds = itemIds.filter((id) => !current.learned[id])
+      if (!newIds.length) return current
       return {
         ...current,
         learned: {
           ...current.learned,
-          ...Object.fromEntries(itemIds.map((id) => [id, learnedAt])),
+          ...Object.fromEntries(newIds.map((id) => [id, learnedAt])),
         },
       }
     })
@@ -63,9 +73,12 @@ export function useProgress() {
 
   const updateSettings = useCallback((settings: Partial<AppSettings>) => {
     setProgress((current) => {
+      const normalized = settings.dailyMinutes
+        ? { ...settings, ...settingsForIntensity(settings.dailyMinutes) }
+        : settings
       const next = {
         ...current,
-        settings: { ...current.settings, ...settings },
+        settings: { ...current.settings, ...normalized },
       }
       saveProgress(next)
       return next

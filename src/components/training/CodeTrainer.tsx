@@ -101,7 +101,7 @@ export function CodeTrainer({
     }
     setResponseTimes((times) => [...times, responseMs])
     onAnswer(current.id, isCorrect, responseMs, answerUsedHint)
-    if (!isCorrect && !current.retry) {
+    if ((!isCorrect || answerUsedHint) && !current.retry) {
       setQueue((questions) => [...questions, { ...current, retry: true }])
     }
   }

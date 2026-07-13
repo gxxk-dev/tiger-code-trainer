@@ -80,6 +80,7 @@ describe('learn before practice routing', () => {
     const root = rootId(basicStrokes[0].entry)
     progress.mastery[root] = updateMastery(undefined, false, 1000, false, 1000)
     progress.mastery['formula:1'] = updateMastery(undefined, false, 1000, false, 1000)
+    progress.mastery['root:zz:missing'] = updateMastery(undefined, false, 1000, false, 1000)
 
     expect(dueItemIds(progress, 1000)).toEqual([root])
   })

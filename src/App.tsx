@@ -3,7 +3,8 @@ import { AppShell } from './components/AppShell'
 import { SettingsPanel } from './components/SettingsPanel'
 import { useProgress } from './hooks/useProgress'
 import { useTheme } from './hooks/useTheme'
-import { dueItemIds } from './lib/items'
+import { buildDailyPlan } from './lib/dailyPlan'
+import { settingsForIntensity } from './lib/intensity'
 import type { TrainingRequest, ViewId } from './types'
 import { TodayView } from './views/TodayView'
 
@@ -27,7 +28,9 @@ function App() {
   const [activeView, setActiveView] = useState<ViewId>('today')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [training, setTraining] = useState<TrainingRequest | null>(null)
+  const [trainingInstance, setTrainingInstance] = useState(0)
   const trainingTriggerRef = useRef<HTMLElement | null>(null)
+  const settingsTriggerRef = useRef<HTMLElement | null>(null)
 
   useTheme(progress.settings.theme)
 
@@ -40,6 +43,7 @@ function App() {
 
   const startTraining = useCallback((request: TrainingRequest) => {
     trainingTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setTrainingInstance((instance) => instance + 1)
     setTraining(request)
   }, [])
 
@@ -53,6 +57,26 @@ function App() {
       document.querySelector<HTMLElement>('main button:not(:disabled), main a[href]')?.focus()
     }, 0)
   }, [])
+
+  const openSettings = useCallback(() => {
+    settingsTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setSettingsOpen(true)
+  }, [])
+
+  const closeSettings = useCallback(() => {
+    setSettingsOpen(false)
+    window.setTimeout(() => settingsTriggerRef.current?.focus(), 0)
+  }, [])
+
+  const continueDailyTraining = useCallback(() => {
+    const plan = buildDailyPlan(progress)
+    if (!training || training.planDate !== plan.dateKey || plan.complete || !plan.nextRequest) {
+      closeTraining()
+      return
+    }
+    setTrainingInstance((instance) => instance + 1)
+    setTraining(plan.nextRequest)
+  }, [closeTraining, progress, training])
 
   const view = (() => {
     switch (activeView) {
@@ -70,10 +94,10 @@ function App() {
           <TodayView
             progress={progress}
             onStart={startTraining}
-            onOpenCourse={() => setActiveView('course')}
+            onIntensityChange={(minutes) => updateSettings(settingsForIntensity(minutes))}
             onSkipOnboarding={() => {
               skipOnboarding()
-              setActiveView('course')
+              window.scrollTo({ top: 0, left: 0 })
             }}
           />
         )
@@ -82,36 +106,43 @@ function App() {
 
   return (
     <>
-      <div inert={training ? true : undefined} aria-hidden={training ? true : undefined}>
+      <div
+        inert={training || settingsOpen ? true : undefined}
+        aria-hidden={training || settingsOpen ? true : undefined}
+      >
         <AppShell
           activeView={activeView}
           onViewChange={setActiveView}
-          onOpenSettings={() => setSettingsOpen(true)}
-          dueCount={dueItemIds(progress).length}
+          onOpenSettings={openSettings}
         >
           <Suspense fallback={<ViewLoading />}>{view}</Suspense>
         </AppShell>
 
-        <SettingsPanel
-          open={settingsOpen}
-          progress={progress}
-          onClose={() => setSettingsOpen(false)}
-          onUpdate={updateSettings}
-          onReset={resetProgress}
-          onRestore={restoreProgress}
-        />
       </div>
+
+      <SettingsPanel
+        open={settingsOpen}
+        progress={progress}
+        onClose={closeSettings}
+        onUpdate={updateSettings}
+        onReset={resetProgress}
+        onRestore={restoreProgress}
+      />
 
       {training ? (
         <Suspense fallback={<SessionLoading />}>
           <TrainingSession
-            key={`${training.kind}-${training.title}-${training.articleId ?? ''}`}
+            key={`${trainingInstance}-${training.kind}-${training.title}-${training.articleId ?? ''}-${training.itemIds?.join('|') ?? ''}-${training.planDate ?? ''}-${training.segment ?? ''}`}
             request={training}
             progress={progress}
             onAnswer={recordAnswer}
             onLearned={markLearned}
             onComplete={completeSession}
             onClose={closeTraining}
+            onContinue={training.origin === 'daily' && training.segment !== 'extra' ? continueDailyTraining : undefined}
+            continueLabel={training.origin === 'daily' && training.segment !== 'extra'
+              ? buildDailyPlan(progress).complete ? '完成今日训练' : '继续下一段'
+              : undefined}
           />
         </Suspense>
       ) : null}

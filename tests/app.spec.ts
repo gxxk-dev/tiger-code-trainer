@@ -2,9 +2,12 @@ import { expect, test, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    if (window.sessionStorage.getItem('tiger-flow-e2e-ready')) return
+    window.localStorage.clear()
+    window.sessionStorage.setItem('tiger-flow-e2e-ready', '1')
+  })
   await page.goto('/')
-  await page.evaluate(() => window.localStorage.clear())
-  await page.reload()
 })
 
 test('fresh learner sees answers and guided typing before recall', async ({ page }, testInfo) => {
@@ -70,15 +73,18 @@ test('fresh learner sees answers and guided typing before recall', async ({ page
   await expect(page.getByText('本轮错题再测')).toBeVisible()
   await expect(training.getByRole('button', { name: '给我一点提示' })).toHaveAttribute('aria-expanded', 'false')
   await expect(training.getByText('G 键先绑定竖；想象一根“钢丝”竖直垂下，s 也来自 shù。')).toHaveCount(0)
+  await answer.fill('fi')
+  await expect(page.getByText('正确', { exact: true })).toBeVisible()
+  await expect(answer).toHaveValue('')
   await answer.fill('gs')
   await expect(page.getByText('正确', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: '本轮完成' })).toBeFocused()
-  await expect(training.getByText('67%', { exact: true })).toBeVisible()
+  await expect(training.getByText('71%', { exact: true })).toBeVisible()
   await expect(training.locator('dl > div').filter({ hasText: '首答正确' }).getByText('3', { exact: true })).toBeVisible()
-  await expect.poll(() => readLatestSessionSummary(page)).toBe('6/4/3')
-  await page.getByRole('button', { name: '继续下一步' }).click()
-  await expect(page.getByRole('heading', { name: '下一步只学一条取码公式' })).toBeVisible()
-  await expect(page.getByRole('button', { name: '学习取码公式' })).toBeFocused()
+  await expect.poll(() => readLatestSessionSummary(page)).toBe('7/5/3')
+  await page.getByRole('button', { name: '完成今日训练' }).click()
+  await expect(page.getByRole('heading', { name: '今天到这里刚好' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '再深入一轮' })).toBeFocused()
 
   await openView(page, '课程')
   const strokeStage = page.getByRole('listitem').filter({
@@ -92,9 +98,10 @@ test('root primer explains complete roots and applies their codes to a character
   await page.evaluate(() => {
     const key = 'tiger-flow-progress-v1'
     const progress = JSON.parse(window.localStorage.getItem(key) ?? '{}') as {
-      settings?: { newItemsPerRound?: number }
+      settings?: { dailyMinutes?: number; newItemsPerRound?: number }
     }
     if (!progress.settings) throw new Error('Expected initialized progress settings')
+    progress.settings.dailyMinutes = 20
     progress.settings.newItemsPerRound = 12
     window.localStorage.setItem(key, JSON.stringify(progress))
   })
@@ -208,27 +215,130 @@ test('interrupted shortcut lesson reopens before moving to another pack', async 
   await expect(training.getByRole('textbox', { name: /输入.*虎码编码/ })).toHaveCount(0)
 })
 
-test('today does not treat a different same-code root as learned', async ({ page }) => {
+test('today exposes one next action and a read-only daily path', async ({ page }) => {
+  await page.getByRole('button', { name: '我已经学过' }).click()
+
+  const mainHeader = page.locator('main header')
+  await expect(mainHeader.getByRole('button', { name: '学习取码公式' })).toBeVisible()
+  await expect(mainHeader.getByRole('button')).toHaveCount(1)
+
+  const dailyPath = page.locator('section[aria-labelledby="today-path-title"]')
+  await expect(dailyPath.getByRole('heading', { name: '今日轨迹' })).toBeVisible()
+  await expect(dailyPath.getByRole('listitem')).toHaveCount(4)
+  await expect(dailyPath.getByRole('button')).toHaveCount(0)
+  await expect(dailyPath.getByText('系统按顺序推进，当前步骤不需要手动选择。')).toBeVisible()
+})
+
+test('training intensity persists its matching daily limits', async ({ page }) => {
+  await page.getByRole('button', { name: '我已经学过' }).click()
+
+  const intensity = page.getByRole('group', { name: '训练强度' })
+  await expect(intensity.getByRole('button', { name: '标准 · 10 分' })).toHaveAttribute('aria-pressed', 'true')
+  await intensity.getByRole('button', { name: '深入 · 20 分' }).click()
+  await expect(intensity.getByRole('button', { name: '深入 · 20 分' })).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(async () => page.evaluate(() => {
+    const progress = JSON.parse(window.localStorage.getItem('tiger-flow-progress-v1') ?? '{}') as {
+      settings?: { dailyMinutes?: number; newItemsPerRound?: number }
+    }
+    return `${progress.settings?.dailyMinutes}/${progress.settings?.newItemsPerRound}`
+  })).toBe('20/12')
+})
+
+test('an interrupted daily lesson resumes before application', async ({ page }) => {
   await page.evaluate(() => {
     const key = 'tiger-flow-progress-v1'
     const progress = JSON.parse(window.localStorage.getItem(key) ?? '{}')
-    const now = Date.now()
-    const learnedRoots = ['root:fi:一', 'root:gs:丨', 'root:tp:丿', 'root:id:丶', 'root:ae:㇆']
+    const finishedAt = Date.now() - 86_400_000
     progress.onboardingComplete = true
-    progress.learned = Object.fromEntries(learnedRoots.map((id) => [id, now]))
-    progress.mastery = {
-      'split:刁': { level: 1, attempts: 1, correct: 1, streak: 1, lapses: 0, averageMs: 800, lastSeenAt: now, dueAt: now + 600_000 },
-      'split:与': { level: 1, attempts: 1, correct: 1, streak: 1, lapses: 0, averageMs: 800, lastSeenAt: now, dueAt: now + 600_000 },
-    }
+    progress.completedStages = { strokes: finishedAt, formula: finishedAt }
+    progress.sessions = [{
+      id: 'formula-complete',
+      kind: 'formula',
+      stageId: 'formula',
+      finishedAt,
+      durationSeconds: 60,
+      attempted: 5,
+      correct: 5,
+      firstTryCorrect: 5,
+      medianMs: 700,
+    }]
     window.localStorage.setItem(key, JSON.stringify(progress))
   })
   await page.reload()
 
-  const splitReview = page.getByRole('listitem').filter({ hasText: '已学拆字复习' })
-  await expect(splitReview).toContainText('2 个只用已学字根的例字')
-  await splitReview.getByRole('button').click()
-  await expect(page.getByRole('region', { name: '“刁”的拆字过程' })).toBeVisible()
-  await expect(page.getByRole('region', { name: '“壬”的拆字过程' })).toHaveCount(0)
+  await page.getByRole('button', { name: '开始今日训练' }).click()
+  const training = page.getByRole('dialog', { name: '今日字根' })
+  await training.getByRole('button', { name: '跟着根码打一次' }).click()
+  await completeVisibleGuidedRootCopy(page, 5)
+  await expect(training.getByText('英文练码')).toBeVisible()
+  await training.getByRole('button', { name: '退出训练' }).click()
+
+  await expect(page.getByRole('heading', { name: '下一段：今日字根' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '把刚学的内容用起来' })).toHaveCount(0)
+  await page.getByRole('button', { name: '开始今日训练' }).click()
+  await expect(training.getByRole('heading', { name: '先认识完整字根和根码' })).toBeVisible()
+})
+
+test('due review is the only next action before new learning', async ({ page }) => {
+  await page.evaluate(() => {
+    const key = 'tiger-flow-progress-v1'
+    const progress = JSON.parse(window.localStorage.getItem(key) ?? '{}')
+    const now = Date.now()
+    progress.onboardingComplete = true
+    progress.learned = { 'root:fi:一': now - 86_400_000 }
+    progress.mastery = {
+      'root:fi:一': {
+        level: 1,
+        attempts: 1,
+        correct: 1,
+        streak: 1,
+        lapses: 0,
+        averageMs: 800,
+        lastSeenAt: now - 86_400_000,
+        dueAt: now - 1_000,
+      },
+    }
+    progress.sessions = [{
+      id: 'formula-complete',
+      kind: 'formula',
+      stageId: 'formula',
+      finishedAt: now - 86_400_000,
+      durationSeconds: 60,
+      attempted: 5,
+      correct: 5,
+      firstTryCorrect: 5,
+      medianMs: 700,
+    }]
+    window.localStorage.setItem(key, JSON.stringify(progress))
+  })
+  await page.reload()
+
+  await expect(page.getByRole('heading', { name: '先复习 1 个到期内容' })).toBeVisible()
+  const mainHeader = page.locator('main header')
+  await expect(mainHeader.getByRole('button', { name: '开始今日训练' })).toBeVisible()
+  await expect(mainHeader.getByRole('button')).toHaveCount(1)
+
+  const dailyPath = page.locator('section[aria-labelledby="today-path-title"]')
+  await expect(dailyPath.getByRole('listitem').filter({ hasText: '复习' })).toContainText('进行中')
+  await expect(dailyPath.getByRole('button')).toHaveCount(0)
+  for (const oldEntry of ['到期复习', '新字根微包', '第一个拆分示范']) {
+    await expect(page.getByRole('button', { name: oldEntry, exact: true })).toHaveCount(0)
+  }
+
+  await mainHeader.getByRole('button', { name: '开始今日训练' }).click()
+  const review = page.getByRole('dialog', { name: '到期复习' })
+  await expect(review).toBeVisible()
+  const answer = review.getByRole('textbox', { name: /输入.*虎码编码/ })
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await review.getByRole('button', { name: '给我一点提示' }).click()
+    await answer.fill('fi')
+    await expect(review.getByText('借提示答对，本题不计掌握')).toBeVisible()
+    await review.getByRole('button', { name: '下一题' }).click()
+  }
+  await expect(review.getByRole('heading', { name: '本轮完成' })).toBeVisible()
+  await review.getByRole('button', { name: '继续下一段' }).click()
+  await expect(review.getByRole('heading', { name: '本轮完成' })).toHaveCount(0)
+  await expect(review.getByRole('textbox', { name: /输入.*虎码编码/ })).toBeVisible()
 })
 
 test('lookup loads offline character data', async ({ page }) => {
@@ -249,8 +359,7 @@ test('lookup loads offline character data', async ({ page }) => {
 test('theme choice persists and dark asset is selected', async ({ page }, testInfo) => {
   const isMobile = page.viewportSize()!.width < 1024
   if (isMobile) {
-    await page.getByRole('button', { name: '打开导航' }).click()
-    await page.getByRole('dialog', { name: '导航菜单' }).getByRole('button', { name: '设置' }).click()
+    await page.getByRole('button', { name: '设置' }).click()
   } else {
     await page.getByRole('button', { name: '设置' }).click()
   }
@@ -372,7 +481,7 @@ test('today and training views have no serious accessibility violations', async 
     .analyze()
   expect(todayResults.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([])
 
-  await openView(page, '统计')
+  await openView(page, '轨迹')
   await page.getByRole('button', { name: '开始第一课' }).click()
   await expect(page.getByRole('heading', { name: '先认识完整字根和根码' })).toBeVisible()
   const trainingResults = await new AxeBuilder({ page })
@@ -436,7 +545,7 @@ test('legacy learner keeps progress and continues with the formula', async ({ pa
   })
   await page.reload()
 
-  await expect(page.getByRole('heading', { name: '下一步只学一条取码公式' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '先学一条取码公式' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '先看答案，不会也能开始' })).toHaveCount(0)
   await expect.poll(async () => page.evaluate(() => JSON.parse(window.localStorage.getItem('tiger-flow-progress-v1') ?? '{}').version)).toBe(2)
 
@@ -454,9 +563,11 @@ test('legacy learner keeps progress and continues with the formula', async ({ pa
 
 test('experienced learner can persistently skip the first lesson', async ({ page }) => {
   await page.getByRole('button', { name: '我已经学过' }).click()
-  await expect(page.getByRole('heading', { name: '从第一次按键，到稳定日用' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '先学一条取码公式' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '从第一次按键，到稳定日用' })).toHaveCount(0)
   await expect.poll(async () => page.evaluate(() => JSON.parse(window.localStorage.getItem('tiger-flow-progress-v1') ?? '{}').onboardingComplete)).toBe(true)
 
+  await openView(page, '课程')
   const skippedStrokeStage = page.getByRole('listitem').filter({
     has: page.getByRole('heading', { name: '五个笔画，先会按' }),
   })
@@ -464,11 +575,11 @@ test('experienced learner can persistently skip the first lesson', async ({ page
   await expect(skippedStrokeStage.getByText('已完成', { exact: true })).toBeVisible()
 
   await page.reload()
-  await expect(page.getByRole('heading', { name: '下一步只学一条取码公式' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '先学一条取码公式' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '先看答案，不会也能开始' })).toHaveCount(0)
 })
 
-async function openView(page: Page, name: '课程' | '统计' | '查码') {
+async function openView(page: Page, name: '练习' | '课程' | '轨迹' | '查码') {
   const isMobile = page.viewportSize()!.width < 1024
   const navigation = page.getByRole('navigation', { name: isMobile ? '快捷导航' : '主要导航' })
   await navigation.getByRole('button', { name }).click()
@@ -480,6 +591,18 @@ async function completeGuidedRootCopy(page: Page, codes: string[]) {
     await guidedInput.fill(code)
     await expect(page.getByText('对，就是这几个键')).toBeVisible()
     await page.getByRole('button', { name: index === codes.length - 1 ? '遮住答案，开始练习' : '下一个' }).click()
+  }
+}
+
+async function completeVisibleGuidedRootCopy(page: Page, count: number) {
+  for (let index = 0; index < count; index += 1) {
+    const guidedInput = page.getByRole('textbox', { name: /照着答案输入/ })
+    const prompt = await guidedInput.locator('..').textContent()
+    const code = prompt?.match(/照着输入\s*([a-z]+)/)?.[1]
+    if (!code) throw new Error(`Could not read guided code from: ${prompt}`)
+    await guidedInput.fill(code)
+    await expect(page.getByText('对，就是这几个键')).toBeVisible()
+    await page.getByRole('button', { name: index === count - 1 ? '遮住答案，开始练习' : '下一个' }).click()
   }
 }
 

@@ -7,6 +7,7 @@ import { requiredSplits } from '../data/splits.generated'
 import { characterId, displayRootGlyph, rootId, shortcutId, splitId } from '../lib/items'
 import { masteryPercent } from '../lib/mastery'
 import { shouldShowLesson } from '../lib/lessons'
+import { hasCompletedStage as hasPersistedStage } from '../lib/stages'
 import type { CourseStage, ProgressState, TrainingRequest } from '../types'
 
 interface CourseViewProps {
@@ -170,6 +171,7 @@ function stageProgress(stage: CourseStage, progress: ProgressState): number {
     return average(entries.map((root) => masteryPercent(progress.mastery[rootId(root)])))
   }
   if (stage.id === 'formula') return hasCompletedStage(stage, progress) ? 100 : 0
+  if (stage.kind === 'article' && hasPersistedStage(progress, stage.id)) return 100
   if (stage.id === 'roots') return average(orderedRoots.map((root) => masteryPercent(progress.mastery[rootId(root)])))
   if (stage.id === 'splits') return average(requiredSplits.map((split) => masteryPercent(progress.mastery[splitId(split)])))
   if (stage.id === 'first-500') return average(characters.slice(0, 500).map((entry) => masteryPercent(progress.mastery[characterId(entry)])))
@@ -185,8 +187,8 @@ function stageProgress(stage: CourseStage, progress: ProgressState): number {
 
 function hasCompletedStage(stage: CourseStage, progress: ProgressState): boolean {
   if (stage.id === 'strokes') return progress.onboardingComplete
-  return stage.id === 'formula'
-    && progress.sessions.some((session) => session.stageId === stage.id)
+  return (stage.id === 'formula' || stage.kind === 'article')
+    && hasPersistedStage(progress, stage.id)
 }
 
 function average(values: number[]): number {

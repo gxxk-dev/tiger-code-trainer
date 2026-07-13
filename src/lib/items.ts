@@ -22,14 +22,14 @@ export function splitId(split: SplitEntry): string {
 
 export function dueItemIds(progress: ProgressState, now = Date.now()): string[] {
   return Object.entries(progress.mastery)
-    .filter(([id, record]) => isReviewableId(id) && record.attempts > 0 && record.dueAt <= now)
+    .filter(([id, record]) => isReviewableId(id) && isResolvableItemId(id) && record.attempts > 0 && record.dueAt <= now)
     .sort(([, left], [, right]) => left.dueAt - right.dueAt)
     .map(([id]) => id)
 }
 
 export function weakItemIds(progress: ProgressState): string[] {
   return Object.entries(progress.mastery)
-    .filter(([id, record]) => isReviewableId(id) && record.attempts >= 2 && record.lapses > 0)
+    .filter(([id, record]) => isReviewableId(id) && isResolvableItemId(id) && record.attempts >= 2 && record.lapses > 0)
     .sort(([, left], [, right]) => {
       const leftAccuracy = left.correct / left.attempts
       const rightAccuracy = right.correct / right.attempts
@@ -40,6 +40,14 @@ export function weakItemIds(progress: ProgressState): string[] {
 
 function isReviewableId(id: string): boolean {
   return id.startsWith('root:') || id.startsWith('char:') || id.startsWith('split:') || id.startsWith('shortcut:')
+}
+
+export function isResolvableItemId(id: string): boolean {
+  if (id.startsWith('root:')) return Boolean(resolveRoot(id))
+  if (id.startsWith('char:')) return Boolean(resolveCharacter(id))
+  if (id.startsWith('split:')) return Boolean(resolveSplit(id))
+  if (id.startsWith('shortcut:')) return Boolean(resolveShortcut(id))
+  return false
 }
 
 export function newRootIds(progress: ProgressState, count: number): string[] {

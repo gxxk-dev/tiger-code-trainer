@@ -8,6 +8,8 @@ export type SessionKind =
   | 'article'
   | 'review'
 
+export type DailySegment = 'foundation' | 'review' | 'learn' | 'apply' | 'extra'
+
 export type FeedbackState = 'idle' | 'correct' | 'incorrect' | 'hint'
 
 export interface RootEntry {
@@ -72,6 +74,12 @@ export interface SessionRecord {
   firstTryCorrect: number
   medianMs: number
   charsPerMinute?: number
+  origin?: 'daily'
+  planDate?: string
+  segment?: DailySegment
+  introduced?: number
+  learningItems?: number
+  itemIds?: string[]
 }
 
 export interface AppSettings {
@@ -87,6 +95,7 @@ export interface ProgressState {
   version: 2
   createdAt: number
   onboardingComplete: boolean
+  completedStages: Record<string, number>
   learned: Record<string, number>
   mastery: Record<string, MasteryRecord>
   sessions: SessionRecord[]
@@ -99,6 +108,9 @@ export interface TrainingRequest {
   stageId?: string
   itemIds?: string[]
   articleId?: string
+  origin?: 'daily'
+  planDate?: string
+  segment?: DailySegment
 }
 
 export interface CourseStage {

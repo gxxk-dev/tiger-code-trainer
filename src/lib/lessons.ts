@@ -2,6 +2,7 @@ import { characters } from '../data/characters.generated'
 import { orderedRoots, splitExamples } from '../data/curriculum'
 import type { ProgressState, TrainingRequest } from '../types'
 import { characterId, rootId, shortcutId, splitId } from './items'
+import { hasCompletedStage } from './stages'
 
 const FORMULA_LESSON_ID = 'lesson:formula'
 const SHORTCUT_LESSON_PREFIX = 'lesson:shortcut:'
@@ -13,7 +14,9 @@ export function shortcutLessonId(itemId: string): string {
 export function lessonIdsForRequest(request: TrainingRequest, progress: ProgressState): string[] {
   if (request.kind === 'review') return []
   if (request.kind === 'formula') {
-    const completed = progress.sessions.some((session) => session.kind === 'formula' && (!request.stageId || session.stageId === request.stageId))
+    const completed = request.stageId
+      ? hasCompletedStage(progress, request.stageId)
+      : progress.sessions.some((session) => session.kind === 'formula')
     return completed ? [] : [FORMULA_LESSON_ID]
   }
   if (request.kind === 'article') {

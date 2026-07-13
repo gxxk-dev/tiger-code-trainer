@@ -8,9 +8,10 @@ describe('progress storage', () => {
 
     expect(progress.version).toBe(2)
     expect(progress.onboardingComplete).toBe(false)
+    expect(progress.completedStages).toEqual({})
     expect(progress.learned).toEqual({})
     expect(progress.mastery).toEqual({})
-    expect(progress.settings.newItemsPerRound).toBe(5)
+    expect(progress.settings.newItemsPerRound).toBe(8)
   })
 
   it('migrates v1 progress without losing mastery, sessions, or settings', () => {
@@ -36,8 +37,10 @@ describe('progress storage', () => {
 
     expect(migrated).toMatchObject({ version: 2, createdAt: 1000, mastery, onboardingComplete: true })
     expect(migrated?.sessions[0]).toMatchObject({ id: 'legacy-session', stageId: 'roots' })
+    expect(migrated?.completedStages.roots).toBe(1234)
+    expect(migrated?.completedStages.strokes).toBe(1000)
     expect(migrated?.learned['root:fi:一']).toBeDefined()
-    expect(migrated?.settings).toMatchObject({ theme: 'dark', dailyMinutes: 20, newItemsPerRound: 8 })
+    expect(migrated?.settings).toMatchObject({ theme: 'dark', dailyMinutes: 20, newItemsPerRound: 12 })
     expect(migrated?.settings.autoAdvance).toBe(true)
   })
 

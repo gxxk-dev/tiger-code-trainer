@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, Pause, X } from 'lucide-react'
 import { median } from '../lib/mastery'
-import { shouldShowLesson } from '../lib/lessons'
+import { lessonIdsForRequest } from '../lib/lessons'
 import type { ProgressState, SessionRecord, TrainingRequest } from '../types'
 import { ArticleTrainer } from './training/ArticleTrainer'
 import { CodeTrainer } from './training/CodeTrainer'
@@ -19,6 +19,8 @@ interface TrainingSessionProps {
   onLearned: (itemIds: string[]) => void
   onComplete: (record: SessionRecord) => void
   onClose: () => void
+  onContinue?: () => void
+  continueLabel?: string
 }
 
 export function TrainingSession({
@@ -28,10 +30,17 @@ export function TrainingSession({
   onLearned,
   onComplete,
   onClose,
+  onContinue,
+  continueLabel,
 }: TrainingSessionProps) {
   const [result, setResult] = useState<SessionResult | null>(null)
   const [paused, setPaused] = useState(false)
-  const [learning, setLearning] = useState(() => shouldShowLesson(request, progress))
+  const initialLessonIds = useRef(lessonIdsForRequest(request, progress))
+  const newLessonIds = useRef(new Set(initialLessonIds.current.filter((id) => !progress.learned[id])))
+  const introducedCount = useRef(0)
+  const learningItemCount = useRef(0)
+  const practicedItemIds = useRef(request.itemIds ?? [])
+  const [learning, setLearning] = useState(() => initialLessonIds.current.length > 0)
   const [practiceItemIds, setPracticeItemIds] = useState(request.itemIds)
   const sessionStartedAt = useRef(Date.now())
 
@@ -55,6 +64,12 @@ export function TrainingSession({
       firstTryCorrect: summary.firstTryCorrect,
       medianMs: median(summary.responseTimes),
       ...(summary.charsPerMinute ? { charsPerMinute: summary.charsPerMinute } : {}),
+      origin: request.origin,
+      planDate: request.planDate,
+      segment: request.segment,
+      introduced: introducedCount.current,
+      learningItems: learningItemCount.current,
+      itemIds: practicedItemIds.current,
     }
     onComplete(record)
     setResult(summary)
@@ -63,6 +78,11 @@ export function TrainingSession({
   const elapsed = () => Math.max(1, Math.round((Date.now() - sessionStartedAt.current) / 1000))
 
   const beginPractice = (itemIds: string[]) => {
+    introducedCount.current = request.kind === 'article' || request.kind === 'formula'
+      ? 0
+      : itemIds.filter((id) => newLessonIds.current.has(id)).length
+    learningItemCount.current = request.kind === 'article' || request.kind === 'formula' ? 0 : itemIds.length
+    practicedItemIds.current = itemIds
     onLearned(itemIds)
     if (request.kind === 'splits') setPracticeItemIds(itemIds)
     sessionStartedAt.current = Date.now()
@@ -103,7 +123,13 @@ export function TrainingSession({
           </div>
         </div>
       ) : result ? (
-        <CompletionView request={request} result={result} onClose={onClose} />
+        <CompletionView
+          request={request}
+          result={result}
+          onClose={onClose}
+          onContinue={onContinue}
+          continueLabel={continueLabel}
+        />
       ) : request.kind === 'article' ? (
         <ArticleTrainer request={request} onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} />
       ) : request.kind === 'formula' ? (
