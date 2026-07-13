@@ -1,0 +1,109 @@
+import { useMemo, useRef, useState } from 'react'
+import { ArrowRight } from 'lucide-react'
+import clsx from 'clsx'
+import { splitExamples } from '../../data/curriculum'
+import { requiredSplits } from '../../data/splits.generated'
+import { displayRootGlyph, resolveSplit, splitId } from '../../lib/items'
+import type { TrainingRequest } from '../../types'
+import { Button } from '../ui/Button'
+import { ProgressBar } from '../ui/ProgressBar'
+import type { TrainingAnswerHandler, TrainingFinishedHandler } from './types'
+
+interface SplitTrainerProps {
+  request: TrainingRequest
+  onAnswer: TrainingAnswerHandler
+  onFinished: TrainingFinishedHandler
+  className?: string
+}
+
+export function SplitTrainer({ request, onAnswer, onFinished, className }: SplitTrainerProps) {
+  const pool = useMemo(() => [...splitExamples, ...requiredSplits.filter((entry) => !splitExamples.some((example) => example.char === entry.char))], [])
+  const initial = request.itemIds?.flatMap((id) => resolveSplit(id) ?? []) ?? pool.slice(0, 10)
+  const [queue, setQueue] = useState(initial)
+  const [index, setIndex] = useState(0)
+  const [selected, setSelected] = useState('')
+  const [attempted, setAttempted] = useState(0)
+  const [correct, setCorrect] = useState(0)
+  const [firstTryCorrect, setFirstTryCorrect] = useState(0)
+  const [responseTimes, setResponseTimes] = useState<number[]>([])
+  const startedAt = useRef(Date.now())
+  const question = queue[index]
+  const options = useMemo(() => {
+    if (!question) return []
+    const distractors = pool.filter((item) => item.char !== question.char && item.roots.length === question.roots.length).slice((index * 3) % Math.max(1, pool.length - 3), (index * 3) % Math.max(1, pool.length - 3) + 3)
+    return [question, ...distractors].sort((left, right) => `${left.char}${index}`.localeCompare(`${right.char}${index}`))
+  }, [index, pool, question])
+
+  const choose = (char: string) => {
+    if (!question || selected) return
+    const isCorrect = char === question.char
+    const responseMs = Date.now() - startedAt.current
+    setSelected(char)
+    setAttempted((value) => value + 1)
+    if (isCorrect) {
+      setCorrect((value) => value + 1)
+      setFirstTryCorrect((value) => value + 1)
+    } else if (!queue[index].note.startsWith('重试')) {
+      setQueue((items) => [...items, { ...question, note: `重试：${question.note}` }])
+    }
+    setResponseTimes((values) => [...values, responseMs])
+    onAnswer(splitId(question), isCorrect, responseMs, false)
+  }
+
+  const next = () => {
+    if (index + 1 >= queue.length) {
+      onFinished({ attempted, correct, firstTryCorrect, responseTimes })
+      return
+    }
+    setIndex((value) => value + 1)
+    setSelected('')
+    startedAt.current = Date.now()
+  }
+
+  if (!question) return null
+  return (
+    <main className={clsx('mx-auto grid min-h-[calc(100dvh-4rem)] max-w-3xl content-center gap-8 px-4 py-10 sm:px-6 lg:px-8', className)}>
+      <div className="grid gap-2">
+        <div className="flex justify-between text-sm text-zinc-500 dark:text-zinc-400"><span>{question.note.startsWith('重试') ? '本轮错题再测' : '选择正确拆分'}</span><span className="tabular-nums">{index + 1} / {queue.length}</span></div>
+        <ProgressBar value={(index / queue.length) * 100} label="拆分训练进度" tone="blue" />
+      </div>
+      <section className="grid min-h-80 content-center justify-items-center gap-8">
+        <p className="font-root text-8xl font-medium text-zinc-950 dark:text-white">{question.char}</p>
+        <div className="grid w-full gap-2 sm:grid-cols-2">
+          {options.map((option) => {
+            const optionValue = option.roots.join(' + ')
+            const revealCorrect = selected && option.char === question.char
+            const revealWrong = selected === option.char && option.char !== question.char
+            return (
+              <button
+                type="button"
+                key={`${option.char}-${optionValue}`}
+                onClick={() => choose(option.char)}
+                className={clsx(
+                  'min-h-14 rounded-md bg-white p-3 text-left font-root text-base font-medium text-zinc-800 ring-1 ring-zinc-950/10 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 dark:bg-white/5 dark:text-zinc-200 dark:ring-white/10',
+                  revealCorrect ? 'ring-emerald-500/50' : '',
+                  revealWrong ? 'ring-red-500/50' : '',
+                )}
+              >
+                {option.roots.map((root, rootIndex) => (
+                  <span key={`${root}-${rootIndex}`}>
+                    {rootIndex ? ' + ' : ''}{displayRootGlyph(root, option.note.match(/[A-Za-z]{2}/g)?.[rootIndex])}
+                  </span>
+                ))}
+              </button>
+            )
+          })}
+        </div>
+      </section>
+      <div className="min-h-28" aria-live="polite">
+        {selected ? (
+          <div className={clsx('rounded-lg p-4 ring-1', selected === question.char ? 'bg-emerald-500/8 ring-emerald-500/20' : 'bg-red-500/8 ring-red-500/20')}>
+            <p className="font-medium text-zinc-950 dark:text-white">{selected === question.char ? '拆分正确' : `正确拆分：${question.roots.map((root, rootIndex) => displayRootGlyph(root, question.note.match(/[A-Za-z]{2}/g)?.[rootIndex])).join(' + ')}`}</p>
+            <p className="mt-1 text-base text-zinc-600 sm:text-sm dark:text-zinc-300">全码 <span className="font-mono font-semibold text-zinc-950 dark:text-white">{question.code}</span>。{question.note.replace(/^重试：/, '')}</p>
+          </div>
+        ) : null}
+      </div>
+      {selected ? <div className="flex justify-center"><Button variant="primary" trailingIcon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={next}>下一题</Button></div> : null}
+    </main>
+  )
+}
