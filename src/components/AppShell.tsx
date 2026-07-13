@@ -55,7 +55,7 @@ export function AppShell({
   return (
     <div className="isolate min-h-dvh bg-canvas text-zinc-950 dark:bg-canvas-dark dark:text-zinc-100">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-zinc-950/8 bg-white px-3 py-5 lg:flex dark:border-white/8 dark:bg-zinc-950">
-        <a href="/" aria-label="Homepage" className="flex items-center gap-2 px-2 text-zinc-950 dark:text-white">
+        <a href={import.meta.env.BASE_URL} aria-label="Homepage" className="flex items-center gap-2 px-2 text-zinc-950 dark:text-white">
           <span className="flex size-8 items-center justify-center rounded-md bg-brand-600 font-semibold text-white" aria-hidden="true">虎</span>
           <span className="font-semibold">虎序</span>
           <span className="text-sm text-zinc-500 dark:text-zinc-400">Tiger Flow</span>
@@ -102,7 +102,7 @@ export function AppShell({
       </aside>
 
       <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-zinc-950/8 bg-canvas/90 px-4 backdrop-blur lg:hidden dark:border-white/8 dark:bg-canvas-dark/90">
-        <a href="/" aria-label="Homepage" className="flex items-center gap-2 font-semibold text-zinc-950 dark:text-white">
+        <a href={import.meta.env.BASE_URL} aria-label="Homepage" className="flex items-center gap-2 font-semibold text-zinc-950 dark:text-white">
           <span className="flex size-7 items-center justify-center rounded-md bg-brand-600 text-white" aria-hidden="true">虎</span>
           虎序
         </a>

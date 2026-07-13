@@ -3,7 +3,10 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const basePath = process.env.VITE_BASE_PATH ?? '/'
+
 export default defineConfig({
+  base: basePath,
   build: {
     // The 5000-character offline lookup table is intentionally a lazy chunk.
     chunkSizeWarningLimit: 1400,
@@ -26,14 +29,17 @@ export default defineConfig({
         background_color: '#f7f7f5',
         display: 'standalone',
         lang: 'zh-CN',
+        id: basePath,
+        start_url: basePath,
+        scope: basePath,
         icons: [
           {
-            src: '/pwa-192.png',
+            src: 'pwa-192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/pwa-512.png',
+            src: 'pwa-512.png',
             sizes: '512x512',
             type: 'image/png',
           },

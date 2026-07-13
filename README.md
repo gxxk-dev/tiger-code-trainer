@@ -2,6 +2,8 @@
 
 一个覆盖虎码完整学习周期的离线优先交互式训练器：从五个基本笔画、241 字根和取码公式，逐步进入 632 个必拆字、前 1500 常用字、简码、真实中文跟打和长期复习。
 
+**在线使用：<https://gxxk-dev.github.io/tiger-code-trainer/>**
+
 ## 功能
 
 - 今日训练：到期复习、新内容和真实输入组成一轮短训练
@@ -42,6 +44,8 @@ bun run lint       # Oxlint
 bun run build      # TypeScript + Vite 生产构建
 bun run check      # lint + unit test + build
 ```
+
+`main` 分支更新后，GitHub Actions 会使用 Bun 构建并自动发布到 GitHub Pages。
 
 ## 训练数据
 

@@ -7,6 +7,9 @@ import type { CharacterLookupEntry } from '../types'
 
 type LookupMode = 'characters' | 'roots'
 
+const lightRootChartUrl = `${import.meta.env.BASE_URL}assets/tiger-root-chart.webp`
+const darkRootChartUrl = `${import.meta.env.BASE_URL}assets/tiger-root-chart-dark.webp`
+
 export function LookupView() {
   const [mode, setMode] = useState<LookupMode>('characters')
   const [query, setQuery] = useState('')
@@ -145,9 +148,9 @@ export function LookupView() {
           </div>
           <Image className="size-4 shrink-0 text-zinc-500" aria-hidden="true" />
         </div>
-        <a href="/assets/tiger-root-chart.webp" target="_blank" className="group mt-5 block overflow-hidden rounded-lg bg-white ring-1 ring-zinc-950/8 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 dark:bg-zinc-950 dark:ring-white/8">
-          <img src="/assets/tiger-root-chart.webp" width="2600" height="938" loading="lazy" alt="虎码官方浅色字根图" className="w-full dark:hidden" />
-          <img src="/assets/tiger-root-chart-dark.webp" width="2600" height="938" loading="lazy" alt="虎码官方深色字根图" className="hidden w-full dark:block" />
+        <a href={lightRootChartUrl} target="_blank" className="group mt-5 block overflow-hidden rounded-lg bg-white ring-1 ring-zinc-950/8 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 dark:bg-zinc-950 dark:ring-white/8">
+          <img src={lightRootChartUrl} width="2600" height="938" loading="lazy" alt="虎码官方浅色字根图" className="w-full dark:hidden" />
+          <img src={darkRootChartUrl} width="2600" height="938" loading="lazy" alt="虎码官方深色字根图" className="hidden w-full dark:block" />
           <span className="sr-only">在新标签页打开字根图</span>
         </a>
         <p className="mt-2 flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400">
