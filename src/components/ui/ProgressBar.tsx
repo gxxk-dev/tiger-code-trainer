@@ -24,8 +24,8 @@ export function ProgressBar({ value, label, tone = 'brand' }: ProgressBarProps) 
         aria-valuenow={bounded}
       >
         <div
-          className={`h-full rounded-full ${tones[tone]}`}
-          style={{ '--progress': `${bounded}%`, width: 'var(--progress)' } as React.CSSProperties}
+          className={`h-full w-(--progress) rounded-full ${tones[tone]}`}
+          style={{ '--progress': `${bounded}%` } as React.CSSProperties}
         />
       </div>
     </div>

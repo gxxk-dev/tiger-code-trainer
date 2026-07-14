@@ -100,7 +100,7 @@ export function buildDailyPlan(progress: ProgressState, now = Date.now()): Daily
   if (!progress.onboardingComplete) {
     nextRequest = dailyRequest({
       kind: 'roots',
-      title: '第 1 课 · 五个基本笔画',
+      title: '第 1 课：五个基本笔画',
       stageId: 'strokes',
       itemIds: basicStrokes.map((stroke) => rootId(stroke.entry)),
     }, dateKey, 'foundation')
@@ -202,7 +202,7 @@ export function buildDeepDiveRequest(progress: ProgressState, now = Date.now()):
   if (!progress.onboardingComplete) {
     return dailyRequest({
       kind: 'roots',
-      title: '第 1 课 · 五个基本笔画',
+      title: '第 1 课：五个基本笔画',
       stageId: 'strokes',
       itemIds: basicStrokes.map((stroke) => rootId(stroke.entry)),
     }, dateKey, 'extra')
@@ -215,11 +215,11 @@ export function buildDeepDiveRequest(progress: ProgressState, now = Date.now()):
   }
 
   const next = nextCurriculumRequest(progress, profile.newItems)
-  if (next) return dailyRequest({ ...next.request, title: `深入 · ${next.request.title}` }, dateKey, 'extra')
+  if (next) return dailyRequest({ ...next.request, title: `深入：${next.request.title}` }, dateKey, 'extra')
 
   return dailyRequest({
     kind: 'article',
-    title: '深入 · 真实中文跟打',
+    title: '深入：真实中文跟打',
     stageId: 'fluency',
     articleId: articles.at(-1)?.id,
   }, dateKey, 'extra')

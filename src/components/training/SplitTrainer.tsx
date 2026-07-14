@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Eye } from 'lucide-react'
 import clsx from 'clsx'
 import { splitExamples } from '../../data/curriculum'
@@ -30,12 +30,25 @@ export function SplitTrainer({ request, onAnswer, onFinished, className }: Split
   const [firstTryCorrect, setFirstTryCorrect] = useState(0)
   const [responseTimes, setResponseTimes] = useState<number[]>([])
   const startedAt = useRef(Date.now())
+  const questionHeadingRef = useRef<HTMLHeadingElement>(null)
+  const nextButtonRef = useRef<HTMLButtonElement>(null)
   const question = queue[index]
   const options = useMemo(() => {
     if (!question) return []
     const distractors = pool.filter((item) => item.char !== question.char && item.roots.length === question.roots.length).slice((index * 3) % Math.max(1, pool.length - 3), (index * 3) % Math.max(1, pool.length - 3) + 3)
     return [question, ...distractors].sort((left, right) => `${left.char}${index}`.localeCompare(`${right.char}${index}`))
   }, [index, pool, question])
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => questionHeadingRef.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [index])
+
+  useEffect(() => {
+    if (!selected) return
+    const frame = window.requestAnimationFrame(() => nextButtonRef.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [selected])
 
   const choose = (char: string, usedHint = false) => {
     if (!question || selected) return
@@ -74,7 +87,7 @@ export function SplitTrainer({ request, onAnswer, onFinished, className }: Split
         <ProgressBar value={(index / queue.length) * 100} label="拆分训练进度" tone="blue" />
       </div>
       <section className="grid min-h-80 content-center justify-items-center gap-8">
-        <p className="font-root text-8xl font-medium text-zinc-950 dark:text-white">{question.char}</p>
+        <h1 ref={questionHeadingRef} tabIndex={-1} className="font-root text-8xl font-medium text-zinc-950 outline-none dark:text-white">{question.char}</h1>
         <div className="grid w-full gap-2 sm:grid-cols-2" role="group" aria-label={`为“${question.char}”选择拆分`}>
           {options.map((option) => {
             const optionValue = option.roots.join(' + ')
@@ -87,8 +100,9 @@ export function SplitTrainer({ request, onAnswer, onFinished, className }: Split
                 key={`${option.char}-${optionValue}`}
                 onClick={() => choose(option.char)}
                 aria-pressed={selected === option.char}
+                disabled={Boolean(selected)}
                 className={clsx(
-                  'min-h-14 rounded-md bg-white p-3 text-left font-root text-base font-medium text-zinc-800 ring-1 ring-zinc-950/10 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 dark:bg-white/5 dark:text-zinc-200 dark:ring-white/10',
+                  'min-h-14 rounded-md bg-white p-3 text-left font-root text-base font-medium text-zinc-800 ring-1 ring-zinc-950/10 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:pointer-events-none disabled:opacity-60 dark:bg-white/5 dark:text-zinc-200 dark:ring-white/10',
                   revealCorrect ? 'ring-emerald-500/50' : '',
                   revealWrong ? 'ring-red-500/50' : '',
                 )}
@@ -118,9 +132,9 @@ export function SplitTrainer({ request, onAnswer, onFinished, className }: Split
         ) : null}
       </div>
       {selected ? (
-        <div className="flex justify-center"><Button variant="primary" trailingIcon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={next}>下一题</Button></div>
+        <div className="flex justify-center"><Button ref={nextButtonRef} variant="primary" trailingIcon={ArrowRight} onClick={next}>下一题</Button></div>
       ) : (
-        <div className="flex justify-center"><Button variant="ghost" leadingIcon={<Eye className="size-4" aria-hidden="true" />} onClick={() => choose(question.char, true)}>我不会，带我拆这题</Button></div>
+        <div className="flex justify-center"><Button variant="ghost" leadingIcon={Eye} onClick={() => choose(question.char, true)}>我不会，带我拆这题</Button></div>
       )}
     </main>
   )

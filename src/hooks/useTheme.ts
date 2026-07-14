@@ -9,6 +9,8 @@ export function useTheme(theme: AppSettings['theme']): void {
       const shouldUseDark = theme === 'dark' || (theme === 'system' && media.matches)
       document.documentElement.classList.toggle('dark', shouldUseDark)
       document.documentElement.style.colorScheme = shouldUseDark ? 'dark' : 'light'
+      document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+        ?.setAttribute('content', shouldUseDark ? '#111310' : '#f7f7f5')
     }
 
     applyTheme()

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { RotateCcw } from 'lucide-react'
+import { Check, RotateCcw } from 'lucide-react'
 import clsx from 'clsx'
 import { articles } from '../../data/curriculum'
 import { calculateAccuracy } from '../../lib/mastery'
@@ -52,13 +52,13 @@ export function ArticleTrainer({ request, onFinished, className }: ArticleTraine
     <main className={clsx('mx-auto grid min-h-[calc(100dvh-4rem)] max-w-4xl content-center gap-7 px-4 py-10 sm:px-6 lg:px-8', className)}>
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-zinc-950/8 pb-5 dark:border-white/8">
         <div>
-          <p className="font-mono text-sm font-medium text-emerald-700 dark:text-emerald-300">Fcitx5 中文实战 · {article.level}</p>
+          <p className="font-mono text-sm font-medium text-emerald-700 dark:text-emerald-300">Fcitx5 中文实战，{article.level}</p>
           <h1 className="mt-2 text-2xl font-semibold text-zinc-950 dark:text-white">{article.title}</h1>
         </div>
         <dl className="flex gap-6">
-          <div><dt className="text-sm text-zinc-500 dark:text-zinc-400">准确率</dt><dd className="mt-1 font-mono text-lg font-semibold text-zinc-950 tabular-nums dark:text-white">{accuracy}%</dd></div>
-          <div><dt className="text-sm text-zinc-500 dark:text-zinc-400">字 / 分</dt><dd className="mt-1 font-mono text-lg font-semibold text-zinc-950 tabular-nums dark:text-white">{cpm || '—'}</dd></div>
-          <div><dt className="text-sm text-zinc-500 dark:text-zinc-400">时间</dt><dd className="mt-1 font-mono text-lg font-semibold text-zinc-950 tabular-nums dark:text-white">{elapsedSeconds}s</dd></div>
+          <div><dt className="text-base text-zinc-500 sm:text-sm dark:text-zinc-400">准确率</dt><dd className="mt-1 font-mono text-lg font-semibold text-zinc-950 tabular-nums dark:text-white">{accuracy}%</dd></div>
+          <div><dt className="text-base text-zinc-500 sm:text-sm dark:text-zinc-400">字 / 分</dt><dd className="mt-1 font-mono text-lg font-semibold text-zinc-950 tabular-nums dark:text-white">{cpm || '—'}</dd></div>
+          <div><dt className="text-base text-zinc-500 sm:text-sm dark:text-zinc-400">时间</dt><dd className="mt-1 font-mono text-lg font-semibold text-zinc-950 tabular-nums dark:text-white">{elapsedSeconds}s</dd></div>
         </dl>
       </div>
 
@@ -104,8 +104,8 @@ export function ArticleTrainer({ request, onFinished, className }: ArticleTraine
       </label>
 
       <div className="flex flex-wrap justify-end gap-2">
-        <Button onClick={() => { setValue(''); setStartedAt(0); setElapsedSeconds(0); setBackspaces(0); textareaRef.current?.focus() }} leadingIcon={<RotateCcw className="size-4" aria-hidden="true" />}>重来</Button>
-        <Button variant="primary" onClick={finish} disabled={!value}>完成本段</Button>
+        <Button onClick={() => { setValue(''); setStartedAt(0); setElapsedSeconds(0); setBackspaces(0); textareaRef.current?.focus() }} leadingIcon={RotateCcw}>重来</Button>
+        <Button variant="primary" leadingIcon={Check} onClick={finish} disabled={!value}>完成本段</Button>
       </div>
     </main>
   )

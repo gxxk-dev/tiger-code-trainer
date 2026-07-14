@@ -1,13 +1,15 @@
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { forwardRef, type ButtonHTMLAttributes } from 'react'
+import type { LucideIcon } from 'lucide-react'
 import clsx from 'clsx'
+import { AppIcon } from './AppIcon'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
   size?: 'compact' | 'default'
-  leadingIcon?: ReactNode
-  trailingIcon?: ReactNode
+  leadingIcon?: LucideIcon
+  trailingIcon?: LucideIcon
 }
 
 const variants: Record<ButtonVariant, string> = {
@@ -31,30 +33,38 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       type="button"
       className={clsx(
-        'inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium outline-none disabled:pointer-events-none disabled:opacity-45',
-        size === 'default' ? 'min-h-10 py-2.5 text-base sm:min-h-9 sm:py-2 sm:text-sm' : 'min-h-9 py-2 text-base sm:min-h-7 sm:py-1.5 sm:text-sm',
-        leadingIcon || trailingIcon ? 'pr-3 pl-2' : 'px-3',
+        'relative inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap outline-none disabled:pointer-events-none disabled:opacity-45',
+        size === 'default' ? 'h-9 py-2' : 'h-7 py-1',
+        leadingIcon && !trailingIcon
+          ? 'pr-3 pl-2'
+          : trailingIcon && !leadingIcon
+            ? 'pr-2 pl-3'
+            : leadingIcon && trailingIcon
+              ? 'px-2'
+              : 'px-3',
         'focus-visible:outline-2 focus-visible:outline-offset-2',
         variants[variant],
         className,
       )}
       {...props}
     >
-      {leadingIcon}
+      {leadingIcon ? <AppIcon icon={leadingIcon} /> : null}
       {children}
-      {trailingIcon}
+      {trailingIcon ? <AppIcon icon={trailingIcon} /> : null}
+      <span className="absolute top-1/2 left-1/2 size-[max(100%,3rem)] -translate-1/2 pointer-fine:hidden" aria-hidden="true" />
     </button>
   )
 })
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string
-  children: ReactNode
+  icon: LucideIcon
 }
 
-export function IconButton({ label, children, className, ...props }: IconButtonProps) {
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton({ label, icon, className, ...props }, ref) {
   return (
     <button
+      ref={ref}
       type="button"
       aria-label={label}
       title={label}
@@ -64,8 +74,8 @@ export function IconButton({ label, children, className, ...props }: IconButtonP
       )}
       {...props}
     >
-      {children}
+      <AppIcon icon={icon} />
       <span className="absolute top-1/2 left-1/2 size-[max(100%,3rem)] -translate-1/2 pointer-fine:hidden" aria-hidden="true" />
     </button>
   )
-}
+})

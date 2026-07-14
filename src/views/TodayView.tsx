@@ -1,5 +1,6 @@
 import { ArrowRight, Check, Circle, CircleDot, Minus, Play } from 'lucide-react'
 import { TrainingIntensityControl } from '../components/TrainingIntensityControl'
+import { AppIcon } from '../components/ui/AppIcon'
 import { Button } from '../components/ui/Button'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { basicStrokes } from '../data/curriculum'
@@ -40,7 +41,7 @@ export function TodayView({ progress, onStart, onIntensityChange, onSkipOnboardi
       <header className="grid gap-6 border-b border-zinc-950/8 pb-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-end dark:border-white/8">
         <div className="min-w-0" aria-live="polite">
           <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">
-            今天 · {plan.profile.label}强度 · 约 {plan.profile.minutes} 分钟
+            今天，{plan.profile.label}强度，约 {plan.profile.minutes} 分钟
           </p>
           <h1 className="mt-2 max-w-[20ch] text-3xl font-semibold text-balance text-zinc-950 sm:text-4xl dark:text-white">
             {plan.headline}
@@ -54,9 +55,7 @@ export function TodayView({ progress, onStart, onIntensityChange, onSkipOnboardi
             variant="primary"
             size="default"
             className="w-full md:w-auto"
-            leadingIcon={plan.complete
-              ? <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
-              : <Play className="size-4 shrink-0 fill-current" aria-hidden="true" />}
+            leadingIcon={plan.complete ? ArrowRight : Play}
             onClick={startNext}
           >
             {plan.ctaLabel}
@@ -124,7 +123,7 @@ export function TodayView({ progress, onStart, onIntensityChange, onSkipOnboardi
 }
 
 function DailyStepItem({ step, index }: { step: DailyStep; index: number }) {
-  const Icon = step.status === 'done'
+  const icon = step.status === 'done'
     ? Check
     : step.status === 'current'
       ? CircleDot
@@ -139,13 +138,13 @@ function DailyStepItem({ step, index }: { step: DailyStep; index: number }) {
       className={step.status === 'current' ? 'min-w-0 bg-blue-500/6 p-4 dark:bg-blue-400/8' : 'min-w-0 p-4'}
     >
       <div className="flex min-w-0 items-start gap-3">
-        <Icon
+        <AppIcon
+          icon={icon}
           className={step.status === 'done'
-            ? 'size-4 shrink-0 stroke-emerald-600 dark:stroke-emerald-400'
+            ? 'stroke-emerald-600 dark:stroke-emerald-400'
             : step.status === 'current'
-              ? 'size-4 shrink-0 stroke-blue-600 dark:stroke-blue-400'
-              : 'size-4 shrink-0 stroke-zinc-400 dark:stroke-zinc-500'}
-          aria-hidden="true"
+              ? 'stroke-blue-600 dark:stroke-blue-400'
+              : 'stroke-zinc-400 dark:stroke-zinc-500'}
         />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-baseline justify-between gap-3">
@@ -179,10 +178,10 @@ function forecastText(plan: ReturnType<typeof buildDailyPlan>): string {
 
 function FirstLessonView({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
   return (
-    <div className="mx-auto grid max-w-6xl gap-10 px-4 pt-8 pb-28 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+    <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
       <header className="grid gap-6 border-b border-zinc-950/8 pb-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-end dark:border-white/8">
         <div className="min-w-0">
-          <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">从零开始 · 第 1 课 · 约 3 分钟</p>
+          <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">从零开始，第 1 课，约 3 分钟</p>
           <h1 className="mt-2 max-w-[18ch] text-3xl font-semibold text-balance text-zinc-950 sm:text-4xl dark:text-white">先看答案，不会也能开始</h1>
           <div className="mt-4 grid max-w-[58ch] gap-1 text-base text-pretty text-zinc-600 dark:text-zinc-300">
             <p>汉字会拆成字根。</p>
@@ -190,7 +189,7 @@ function FirstLessonView({ onStart, onSkip }: { onStart: () => void; onSkip: () 
             <p>实际输入全部使用小写，不需要按 Shift。</p>
           </div>
         </div>
-        <Button variant="primary" size="default" leadingIcon={<Play className="size-4 shrink-0 fill-current" aria-hidden="true" />} onClick={onStart}>
+        <Button variant="primary" size="default" leadingIcon={Play} onClick={onStart}>
           开始第 1 课
         </Button>
       </header>
@@ -227,7 +226,7 @@ function FirstLessonView({ onStart, onSkip }: { onStart: () => void; onSkip: () 
           </ol>
           <div className="mt-7 border-t border-zinc-950/8 pt-5 dark:border-white/8">
             <p className="text-base text-zinc-500 sm:text-sm dark:text-zinc-400">现在不用管：完整字根表、拆字规则、简码和速度。</p>
-            <Button variant="ghost" size="compact" className="mt-3" trailingIcon={<ArrowRight className="size-4 shrink-0" aria-hidden="true" />} onClick={onSkip}>我已经学过</Button>
+            <Button variant="ghost" size="compact" className="mt-3" trailingIcon={ArrowRight} onClick={onSkip}>我已经学过</Button>
           </div>
         </aside>
       </div>

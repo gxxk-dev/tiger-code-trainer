@@ -17,8 +17,8 @@ describe('root memory hints', () => {
     }, {})
 
     expect(counts).toEqual({ initial: 201, final: 35, 'umlaut-v': 5 })
-    expect(getRootMemoryHint(roots.find((root) => root.root === '儿')!).secondaryCue).toBe('小码 e · 取 ér 的韵母字母')
-    expect(getRootMemoryHint(roots.find((root) => root.root === '丨')!).secondaryCue).toBe('小码 s · 取 shù 声母的首字母')
+    expect(getRootMemoryHint(roots.find((root) => root.root === '儿')!).secondaryCue).toBe('小码 e，取 ér 的韵母字母')
+    expect(getRootMemoryHint(roots.find((root) => root.root === '丨')!).secondaryCue).toBe('小码 s，取 shù 声母的首字母')
   })
 
   it('provides a renderable, code-specific hint for every root', () => {
@@ -58,7 +58,7 @@ describe('root memory hints', () => {
 
     expect(getRootMemoryHint(missing)).toMatchObject({
       primaryCue: expect.stringContaining('和“木”同键'),
-      secondaryCue: '小码 q · 取 qiàn 声母的首字母',
+      secondaryCue: '小码 q，取 qiàn 声母的首字母',
     })
     expect(getRootMemoryHint(plate).mnemonic).toContain('“门”完全同码')
   })

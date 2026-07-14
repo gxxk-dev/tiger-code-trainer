@@ -309,7 +309,7 @@ async function generateOfficialCharacters(): Promise<void> {
       roots: Array.from(split.radical[0] ?? ''),
       rootCodes: rootCodes.map((code) => code.toLowerCase()),
       code: canonicalCode(rootCodes),
-      note: `字根码：${rootCodes.join(' · ')}`,
+      note: `字根码：${rootCodes.join('、')}`,
     }]
   })
   writeFileSync(

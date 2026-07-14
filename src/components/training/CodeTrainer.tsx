@@ -16,6 +16,7 @@ import {
 import { getRootMemoryHint } from '../../lib/rootHints'
 import { resolveSplitRootCodes } from '../../lib/splitEncoding'
 import type { FeedbackState, ProgressState, SplitEntry, TrainingRequest } from '../../types'
+import { AppIcon } from '../ui/AppIcon'
 import { Button } from '../ui/Button'
 import { ProgressBar } from '../ui/ProgressBar'
 import { MemoryHint } from './MemoryHint'
@@ -219,7 +220,7 @@ export function CodeTrainer({
             <div className="flex flex-wrap justify-center gap-2">
               <Button
                 variant="ghost"
-                leadingIcon={<Lightbulb className="size-4" aria-hidden="true" />}
+                leadingIcon={Lightbulb}
                 aria-expanded={hintVisible}
                 aria-controls="code-memory-hint"
                 onClick={hintVisible ? hideHint : showHint}
@@ -227,7 +228,7 @@ export function CodeTrainer({
                 {hintVisible ? '收起提示' : '给我一点提示'}
               </Button>
               {hintVisible ? (
-                <Button variant="secondary" size="compact" leadingIcon={<Eye className="size-4" aria-hidden="true" />} onClick={revealAnswer}>显示答案</Button>
+                <Button variant="secondary" size="compact" leadingIcon={Eye} onClick={revealAnswer}>显示答案</Button>
               ) : null}
             </div>
           </div>
@@ -236,7 +237,7 @@ export function CodeTrainer({
 
       {feedback !== 'idle' && (feedback !== 'correct' || !progress.settings.autoAdvance) ? (
         <div className="flex justify-center">
-          <Button ref={nextButtonRef} variant="primary" trailingIcon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={advance}>下一题</Button>
+          <Button ref={nextButtonRef} variant="primary" trailingIcon={ArrowRight} onClick={advance}>下一题</Button>
         </div>
       ) : null}
     </main>
@@ -266,7 +267,7 @@ function CodeSlots({
           {Array.from({ length: slotCount }, (_, index) => {
             const character = value[index] ?? ''
             return (
-              <span
+              <p
                 key={index}
                 className={clsx(
                   'flex size-12 items-center justify-center rounded-md bg-white font-mono text-xl font-semibold ring-1 dark:bg-white/5',
@@ -277,7 +278,7 @@ function CodeSlots({
                 )}
               >
                 {character || <span className="h-px w-3 bg-zinc-300 dark:bg-zinc-600" />}
-              </span>
+              </p>
             )
           })}
         </div>
@@ -305,7 +306,11 @@ function FeedbackPanel({
       correct ? 'bg-emerald-500/8 ring-emerald-500/20' : hinted ? 'bg-blue-500/8 ring-blue-500/20' : 'bg-red-500/8 ring-red-500/20',
     )}>
       <div className="flex items-start gap-3">
-        {correct ? <Check className="size-4 shrink-0 stroke-emerald-600 dark:stroke-emerald-300" aria-hidden="true" /> : hinted ? <Lightbulb className="size-4 shrink-0 stroke-blue-600 dark:stroke-blue-300" aria-hidden="true" /> : <XCircle className="size-4 shrink-0 stroke-red-600 dark:stroke-red-300" aria-hidden="true" />}
+        {correct
+          ? <AppIcon icon={Check} className="stroke-emerald-600 dark:stroke-emerald-300" />
+          : hinted
+            ? <AppIcon icon={Lightbulb} className="stroke-blue-600 dark:stroke-blue-300" />
+            : <AppIcon icon={XCircle} className="stroke-red-600 dark:stroke-red-300" />}
         <div className="min-w-0 flex-1">
           <p className="font-medium text-zinc-950 dark:text-white">{correct ? '正确' : hinted ? '借提示答对，本题不计掌握' : `你的输入：${input || '未作答'}`}</p>
           <p className="mt-1 text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">正确编码：<span className="font-mono font-semibold text-zinc-950 dark:text-white">{question.expected}</span>。{question.explanation}</p>
@@ -318,9 +323,9 @@ function FeedbackPanel({
           {question.roots?.length && !question.split ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {question.roots.map((root, index) => (
-                <span key={`${root.glyph}-${index}`} className="rounded-md bg-white/70 px-2 py-1 font-root text-sm text-zinc-700 ring-1 ring-zinc-950/8 dark:bg-white/6 dark:text-zinc-200 dark:ring-white/8">
+                <div key={`${root.glyph}-${index}`} className="rounded-md bg-white/70 px-2 py-1 font-root text-base text-zinc-700 ring-1 ring-zinc-950/8 sm:text-sm dark:bg-white/6 dark:text-zinc-200 dark:ring-white/8">
                   {displayRootGlyph(root.glyph, root.code)} <span className="font-mono text-zinc-500 dark:text-zinc-400">{root.code}</span>
-                </span>
+                </div>
               ))}
             </div>
           ) : null}
@@ -340,7 +345,7 @@ function buildCodeQuestions(request: TrainingRequest, progress: ProgressState): 
         id: rootId(root),
         glyph: displayRootGlyph(root.root, root.code),
         expected: root.code,
-        eyebrow: '完整字根 · 输入根码',
+        eyebrow: '完整字根，输入根码',
         explanation: `这是完整字根，不再拆。大码 ${root.code[0].toUpperCase()} + 小码 ${root.code[1]}，依次输入 ${root.code}。${root.examples.length ? `可在这些字里找到它：${root.examples.join('、')}。` : ''}`,
         hint: hint.mnemonic,
         concealLength: false,

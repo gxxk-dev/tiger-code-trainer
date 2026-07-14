@@ -118,7 +118,7 @@ for (const root of roots) {
 
 function soundCue(root: RootEntry): string {
   const smallCode = root.code[1]
-  return `小码 ${smallCode} · ${soundReason(root)}`
+  return `小码 ${smallCode}，${soundReason(root)}`
 }
 
 export type RootPhoneticRule = 'initial' | 'final' | 'umlaut-v'
@@ -172,15 +172,15 @@ export function getRootMemoryHint(root: RootEntry): RootMemoryHint {
   const mnemonic = customMnemonics[`${root.root}:${root.code}`]
     ?? `${example ? `先在例字“${example}”里认出“${root.root}”，` : ''}它和“${anchor}”同在 ${mainCode.toUpperCase()} 键；小码 ${root.code[1]} ${soundReason(root)}${sameCodeCue}。`
   const anchorCue = root.root === anchor ? '本键锚点' : `和“${anchor}”同键`
-  const compactAnchorCue = root.root === anchor ? `${mainCode.toUpperCase()} 键锚点` : `${mainCode.toUpperCase()} 键 · 同“${anchor}”`
+  const compactAnchorCue = root.root === anchor ? `${mainCode.toUpperCase()} 键锚点` : `${mainCode.toUpperCase()} 键，同“${anchor}”`
   const compactSoundCue = getRootPhoneticRule(root) === 'umlaut-v'
     ? `${root.code[1]} ← ${pronunciation}（ü）`
     : `${root.code[1]} ← ${pronunciation}`
 
   return {
     mnemonic,
-    compactCue: `${compactAnchorCue} · ${compactSoundCue}`,
-    primaryCue: `大码 ${mainCode.toUpperCase()} · ${anchorCue} · ${keyPositions[mainCode]}`,
+    compactCue: `${compactAnchorCue}；${compactSoundCue}`,
+    primaryCue: `大码 ${mainCode.toUpperCase()}，${anchorCue}，${keyPositions[mainCode]}`,
     secondaryCue,
   }
 }

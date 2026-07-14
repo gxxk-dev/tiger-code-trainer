@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Check, Eye, Keyboard } from 'lucide-react'
+import { ArrowRight, Check, Eye, Keyboard, SkipForward } from 'lucide-react'
 import clsx from 'clsx'
 import {
   articles,
@@ -20,6 +20,7 @@ import { lessonIdsForRequest, sourceItemId } from '../../lib/lessons'
 import { getRootMemoryHint } from '../../lib/rootHints'
 import { splitUsesAnyRoot, splitUsesOnlyRoots } from '../../lib/splitEncoding'
 import type { ProgressState, RootEntry, SplitEntry, TrainingRequest } from '../../types'
+import { AppIcon } from '../ui/AppIcon'
 import { Button } from '../ui/Button'
 import { MemoryHint } from './MemoryHint'
 import { SplitEncodingProcess } from './SplitEncodingProcess'
@@ -102,7 +103,7 @@ function CodeLesson({
     return (
       <main className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-4xl content-center gap-8 px-4 py-10 sm:px-6 lg:px-8">
         <header className="max-w-2xl">
-          <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">第 1 步 / 3 · 认识</p>
+          <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">第 1 步 / 3：认识</p>
           <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl font-semibold text-balance text-zinc-950 outline-none dark:text-white">
             {isRootLesson ? '先认识完整字根和根码' : '先看答案，不测试'}
           </h1>
@@ -133,19 +134,19 @@ function CodeLesson({
         ) : null}
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="primary" leadingIcon={<Keyboard className="size-4" aria-hidden="true" />} onClick={() => setPhase('copy')}>
+          <Button variant="primary" leadingIcon={Keyboard} onClick={() => setPhase('copy')}>
             {isRootLesson ? '跟着根码打一次' : '跟着答案打一次'}
           </Button>
-          <Button variant="ghost" onClick={onComplete}>我已经会了，直接练习</Button>
+          <Button variant="ghost" size="compact" leadingIcon={SkipForward} onClick={onComplete}>我已经会了，直接练习</Button>
         </div>
 
         <ul role="list" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((lessonItem) => (
             <li key={lessonItem.id} className="grid min-h-36 grid-cols-[4rem_1fr] items-center gap-4 rounded-lg bg-white p-4 ring-1 ring-zinc-950/8 dark:bg-white/4 dark:ring-white/8">
-              <span className="font-root text-5xl font-medium text-zinc-950 dark:text-white">{displayRootGlyph(lessonItem.glyph)}</span>
+              <p className="font-root text-5xl font-medium text-zinc-950 dark:text-white">{displayRootGlyph(lessonItem.glyph)}</p>
               <div className="min-w-0">
-                <span className="block text-base font-medium text-zinc-500 sm:text-sm dark:text-zinc-400">{lessonItem.label}</span>
-                <span className="mt-1 block font-mono text-2xl font-semibold text-brand-700 dark:text-brand-300">{lessonItem.code}</span>
+                <p className="text-base font-medium text-zinc-500 sm:text-sm dark:text-zinc-400">{lessonItem.label}</p>
+                <p className="mt-1 font-mono text-2xl font-semibold text-brand-700 dark:text-brand-300">{lessonItem.code}</p>
                 {lessonItem.kind === 'root' ? (
                   <div className="mt-2 grid gap-1.5 text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">
                     <p>
@@ -154,11 +155,11 @@ function CodeLesson({
                       {' → '}输入 <span className="font-mono font-semibold text-zinc-950 dark:text-white">{lessonItem.code}</span>
                     </p>
                     {visibleVariants(lessonItem.variants).length ? <p className="font-root">常见变形：{visibleVariants(lessonItem.variants).join(' ')}</p> : null}
-                    {lessonItem.examples?.length ? <p className="font-root">可在这些字里找它：{lessonItem.examples.join(' · ')}</p> : null}
+                    {lessonItem.examples?.length ? <p className="font-root">可在这些字里找它：{lessonItem.examples.join('、')}</p> : null}
                     <p>{lessonItem.detail}</p>
                   </div>
                 ) : (
-                  <span className="mt-2 block text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">{lessonItem.detail}</span>
+                  <p className="mt-2 text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">{lessonItem.detail}</p>
                 )}
                 {lessonItem.hint ? (
                   <MemoryHint text={lessonItem.hint} className="mt-3 border-t border-zinc-950/8 pt-3 dark:border-white/8" />
@@ -185,7 +186,7 @@ function CodeLesson({
   return (
     <main className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-3xl content-center gap-8 px-4 py-10 sm:px-6 lg:px-8">
       <header>
-        <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">第 2 步 / 3 · 跟打 {index + 1} / {items.length}</p>
+        <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">第 2 步 / 3：跟打 {index + 1} / {items.length}</p>
         <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl font-semibold text-balance text-zinc-950 outline-none dark:text-white">
           {item.kind === 'root' ? '完整字根不再拆，照着输入根码' : '答案一直显示，照着输入'}
         </h1>
@@ -211,7 +212,7 @@ function CodeLesson({
         ) : (
           <div className="flex justify-center gap-2" aria-label={`答案 ${item.code}`}>
             {Array.from(item.code).map((character, codeIndex) => (
-              <span key={`${character}-${codeIndex}`} className="flex size-12 items-center justify-center rounded-md bg-blue-500/8 font-mono text-xl font-semibold text-blue-800 ring-1 ring-blue-500/20 dark:text-blue-200">{character}</span>
+              <p key={`${character}-${codeIndex}`} className="flex size-12 items-center justify-center rounded-md bg-blue-500/8 font-mono text-xl font-semibold text-blue-800 ring-1 ring-blue-500/20 dark:text-blue-200">{character}</p>
             ))}
           </div>
         )}
@@ -241,12 +242,12 @@ function CodeLesson({
           />
         </label>
         <p className="min-h-6 text-base text-zinc-600 dark:text-zinc-300" aria-live="polite">
-          {copied ? <span className="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-300"><Check className="size-4" aria-hidden="true" />对，就是这几个键</span> : null}
+          {copied ? <span className="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-300"><AppIcon icon={Check} />对，就是这几个键</span> : null}
         </p>
       </section>
 
       <div className="flex justify-center">
-        <Button variant="primary" disabled={!copied} trailingIcon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={advance}>
+        <Button variant="primary" disabled={!copied} trailingIcon={ArrowRight} onClick={advance}>
           {index + 1 >= items.length ? '遮住答案，开始练习' : '下一个'}
         </Button>
       </div>
@@ -265,7 +266,7 @@ function FormulaLesson({ headingRef, onComplete }: { headingRef: React.RefObject
   return (
     <main className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-4xl content-center gap-8 px-4 py-10 sm:px-6 lg:px-8">
       <header className="max-w-2xl">
-        <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">先学规则 · 不测试</p>
+        <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">先学规则，不测试</p>
         <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl font-semibold text-balance text-zinc-950 outline-none dark:text-white">只记这一条取码公式</h1>
         <p className="mt-3 text-base text-pretty text-zinc-600 dark:text-zinc-400">大写字母只是公式里的大码记号，小写字母代表末根的小码；实际输入仍然全部使用小写。</p>
       </header>
@@ -282,7 +283,7 @@ function FormulaLesson({ headingRef, onComplete }: { headingRef: React.RefObject
         <p id="formula-example" className="font-medium text-zinc-950 dark:text-white">例：华 = 亻(J) + 匕(V) + 十(Ns)</p>
         <p className="mt-2 text-base text-zinc-700 sm:text-sm dark:text-zinc-300">三个字根用 ABCc，所以取 J、V、N，再补末根小码 s：<span className="font-mono font-semibold">jvns</span>。</p>
       </section>
-      <Button variant="primary" className="w-fit" trailingIcon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={onComplete}>开始公式练习</Button>
+      <Button variant="primary" className="w-fit" trailingIcon={ArrowRight} onClick={onComplete}>开始公式练习</Button>
     </main>
   )
 }
@@ -291,7 +292,7 @@ function SplitLesson({ items, headingRef, onComplete }: { items: LessonItem[]; h
   return (
     <main className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-4xl content-center gap-8 px-4 py-10 sm:px-6 lg:px-8">
       <header className="max-w-2xl">
-        <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">先看示范 · 不测试</p>
+        <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">先看示范，不测试</p>
         <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl font-semibold text-balance text-zinc-950 outline-none dark:text-white">看懂汉字怎样一步步变成全码</h1>
         <p className="mt-3 text-base text-pretty text-zinc-600 dark:text-zinc-400">
           一次只学一个字：先拆成有顺序的字根，再查每根的两字母根码，最后套取码公式。看完后只练这个字，不需要输入字根字形。
@@ -305,7 +306,7 @@ function SplitLesson({ items, headingRef, onComplete }: { items: LessonItem[]; h
         ))}
       </ul>
       <div>
-        <Button variant="primary" className="w-fit" trailingIcon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={onComplete}>看完过程，开始选字根</Button>
+        <Button variant="primary" className="w-fit" trailingIcon={ArrowRight} onClick={onComplete}>看完过程，开始选字根</Button>
       </div>
     </main>
   )
@@ -321,10 +322,10 @@ function ArticleLesson({ request, headingRef, onComplete }: { request: TrainingR
         <p className="mt-3 text-base text-pretty text-zinc-600 dark:text-zinc-400">下一页直接输入中文，不需要在网页里打虎码字母。候选和选重都由系统输入法处理。</p>
       </header>
       <section className="rounded-lg bg-white p-5 ring-1 ring-zinc-950/8 dark:bg-white/4 dark:ring-white/8" aria-labelledby="article-preview">
-        <div className="flex items-center gap-2 text-base font-medium text-zinc-500 sm:text-sm dark:text-zinc-400"><Eye className="size-4" aria-hidden="true" />本轮原文</div>
+        <div className="flex items-center gap-2 text-base font-medium text-zinc-500 sm:text-sm dark:text-zinc-400"><AppIcon icon={Eye} />本轮原文</div>
         <p id="article-preview" className="mt-3 text-lg/8 text-zinc-950 dark:text-white">{article.text}</p>
       </section>
-      <Button variant="primary" className="w-fit" leadingIcon={<Keyboard className="size-4" aria-hidden="true" />} onClick={onComplete}>开始 Fcitx5 实打</Button>
+      <Button variant="primary" className="w-fit" leadingIcon={Keyboard} onClick={onComplete}>开始 Fcitx5 实打</Button>
     </main>
   )
 }
@@ -340,7 +341,7 @@ function buildLessonItems(itemIds: string[], request: TrainingRequest): LessonIt
         id,
         kind: 'root',
         glyph: root.root,
-        label: stroke ? `基本笔画 · ${stroke.name}` : '完整字根 · 不再拆',
+        label: stroke ? `基本笔画：${stroke.name}` : '完整字根，不再拆',
         code: root.code,
         detail: hint.compactCue,
         hint: hint.mnemonic,

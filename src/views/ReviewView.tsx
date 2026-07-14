@@ -1,4 +1,5 @@
 import { ArrowRight, RotateCcw } from 'lucide-react'
+import { AppIcon } from '../components/ui/AppIcon'
 import { Button } from '../components/ui/Button'
 import { dueItemIds, getItemLabel, weakItemIds } from '../lib/items'
 import { masteryPercent } from '../lib/mastery'
@@ -27,7 +28,7 @@ export function ReviewView({ progress, onStart }: ReviewViewProps) {
         </div>
         <Button
           variant="primary"
-          leadingIcon={<RotateCcw className="size-4" aria-hidden="true" />}
+          leadingIcon={RotateCcw}
           disabled={!dueIds.length && !weakIds.length}
           onClick={() => onStart({ kind: 'review', title: '到期复习', itemIds: (dueIds.length ? dueIds : weakIds).slice(0, 16) })}
         >
@@ -41,7 +42,7 @@ export function ReviewView({ progress, onStart }: ReviewViewProps) {
             <h2 id="due-title" className="text-xl font-semibold text-zinc-950 dark:text-white">到期队列</h2>
             <p className="mt-1 text-base text-zinc-600 sm:text-sm dark:text-zinc-400">按最早到期的顺序排列。</p>
           </div>
-          <span className="text-sm text-zinc-500 tabular-nums dark:text-zinc-400">{dueIds.length} 项</span>
+          <p className="text-sm text-zinc-500 tabular-nums dark:text-zinc-400">{dueIds.length} 项</p>
         </div>
         {dueIds.length ? (
           <ItemList ids={dueIds.slice(0, 20)} progress={progress} onStart={(id) => onStart({ kind: 'review', title: '单项复习', itemIds: [id] })} />
@@ -57,7 +58,7 @@ export function ReviewView({ progress, onStart }: ReviewViewProps) {
             <p className="mt-1 text-base text-zinc-600 sm:text-sm dark:text-zinc-400">至少练过两次，并且出现过遗忘。</p>
           </div>
           {weakIds.length ? (
-            <Button size="compact" trailingIcon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={() => onStart({ kind: 'review', title: '薄弱项专项', itemIds: weakIds.slice(0, 16) })}>
+            <Button size="compact" trailingIcon={ArrowRight} onClick={() => onStart({ kind: 'review', title: '薄弱项专项', itemIds: weakIds.slice(0, 16) })}>
               专项复习
             </Button>
           ) : null}
@@ -78,17 +79,24 @@ function ItemList({ ids, progress, onStart }: { ids: string[]; progress: Progres
       {ids.map((id) => {
         const item = getItemLabel(id)
         const record = progress.mastery[id]
+        const percent = masteryPercent(record)
         return (
-          <li key={id}>
-            <button type="button" onClick={() => onStart(id)} className="group flex w-full min-w-0 items-center gap-4 py-4 text-left outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500">
-              <span className="flex size-11 shrink-0 items-center justify-center font-root text-2xl font-medium text-zinc-950 sm:size-9 sm:text-xl dark:text-white">{item.glyph}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-base font-medium text-zinc-950 sm:text-sm dark:text-white">{item.detail}</span>
-                <span className="mt-1 block truncate text-sm text-zinc-500 tabular-nums dark:text-zinc-400">{record.attempts} 次 · 遗忘 {record.lapses} 次</span>
-              </span>
-              <span className="text-sm text-zinc-500 tabular-nums dark:text-zinc-400">{masteryPercent(record)}%</span>
-              <ArrowRight className="size-4 shrink-0 text-zinc-500 group-hover:text-zinc-950 dark:group-hover:text-white" aria-hidden="true" />
-            </button>
+          <li key={id} className="group relative">
+            <button
+              type="button"
+              onClick={() => onStart(id)}
+              aria-label={`${item.glyph}，${item.detail}，练习 ${record.attempts} 次，遗忘 ${record.lapses} 次，掌握 ${percent}%，开始单项复习`}
+              className="absolute inset-0 z-10 w-full outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500"
+            />
+            <div className="pointer-events-none flex min-w-0 items-center gap-4 py-4" aria-hidden="true">
+              <p className="flex size-11 shrink-0 items-center justify-center font-root text-2xl font-medium text-zinc-950 sm:size-9 sm:text-xl dark:text-white">{item.glyph}</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-medium text-zinc-950 sm:text-sm dark:text-white">{item.detail}</p>
+                <p className="mt-1 truncate text-base text-zinc-500 tabular-nums sm:text-sm dark:text-zinc-400">{record.attempts} 次，遗忘 {record.lapses} 次</p>
+              </div>
+              <p className="text-base text-zinc-500 tabular-nums sm:text-sm dark:text-zinc-400">{percent}%</p>
+              <AppIcon icon={ArrowRight} className="stroke-zinc-500 group-hover:stroke-zinc-950 dark:group-hover:stroke-white" />
+            </div>
           </li>
         )
       })}

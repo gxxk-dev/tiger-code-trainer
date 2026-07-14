@@ -1,4 +1,5 @@
 import { ArrowRight, Check, Play } from 'lucide-react'
+import { AppIcon } from '../components/ui/AppIcon'
 import { Button } from '../components/ui/Button'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { characters } from '../data/characters.generated'
@@ -24,7 +25,7 @@ export function CourseView({ progress, onStart }: CourseViewProps) {
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
       <header className="border-b border-zinc-950/8 pb-8 dark:border-white/8">
-        <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">完整路线 · 可随时跳关</p>
+        <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">完整路线，可随时跳关</p>
         <h1 className="mt-2 max-w-[20ch] text-3xl font-semibold text-balance text-zinc-950 sm:text-4xl dark:text-white">从第一次按键，到稳定日用</h1>
         <p className="mt-3 max-w-[56ch] text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-400">
           推荐顺序不会锁住内容。已经会的阶段可直接测试，薄弱内容会进入复习队列。
@@ -41,15 +42,15 @@ export function CourseView({ progress, onStart }: CourseViewProps) {
             const completed = hasCompletedStage(stage, progress)
             return (
               <li key={stage.id} className="grid gap-4 py-5 md:grid-cols-[2.5rem_minmax(0,1fr)_9rem_auto] md:items-center">
-                <span className="font-mono text-sm text-zinc-500 tabular-nums dark:text-zinc-400">{String(stage.index).padStart(2, '0')}</span>
+                <p className="font-mono text-sm text-zinc-500 tabular-nums dark:text-zinc-400">{String(stage.index).padStart(2, '0')}</p>
                 <div className="min-w-0">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <h3 className="text-lg font-semibold text-zinc-950 dark:text-white">{stage.title}</h3>
                     {completed || percent >= 85 ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 py-1 pr-2 pl-1 text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                        <Check className="size-4 shrink-0" aria-hidden="true" />
+                      <p className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 py-1 pr-2 pl-1 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                        <AppIcon icon={Check} />
                         {completed ? '已完成' : '稳定'}
-                      </span>
+                      </p>
                     ) : null}
                   </div>
                   <p className="mt-1 max-w-[68ch] text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-400">{stage.description}</p>
@@ -63,7 +64,7 @@ export function CourseView({ progress, onStart }: CourseViewProps) {
                 </div>
                 <Button
                   size="compact"
-                  leadingIcon={percent ? <ArrowRight className="size-4" aria-hidden="true" /> : <Play className="size-4" aria-hidden="true" />}
+                  leadingIcon={percent ? ArrowRight : Play}
                   onClick={() => startStage(stage)}
                 >
                   {needsLesson ? '学习' : percent ? '继续练习' : '练习'}
@@ -80,7 +81,7 @@ export function CourseView({ progress, onStart }: CourseViewProps) {
             <h2 id="packs-title" className="text-xl font-semibold text-zinc-950 dark:text-white">字根微包</h2>
             <p className="mt-1 max-w-[56ch] text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-400">每包约 15 个，每轮只学 {progress.settings.newItemsPerRound} 个。前几包优先覆盖常用部件和五个基本笔画。</p>
           </div>
-          <p className="text-sm text-zinc-500 tabular-nums dark:text-zinc-400">共 {rootPacks.length} 包 · 241 根</p>
+          <p className="text-sm text-zinc-500 tabular-nums dark:text-zinc-400">共 {rootPacks.length} 包，241 根</p>
         </div>
         <ul role="list" className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {rootPacks.map((pack, index) => {
@@ -94,14 +95,14 @@ export function CourseView({ progress, onStart }: CourseViewProps) {
                     const selected = (unseen.length ? unseen : pack.roots).slice(0, progress.settings.newItemsPerRound)
                     onStart({ kind: 'roots', title: pack.title, stageId: 'roots', itemIds: selected.map(rootId) })
                   }}
-                  className="flex w-full min-w-0 items-center gap-3 rounded-md bg-white p-3 text-left ring-1 ring-zinc-950/8 outline-none hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 dark:bg-white/4 dark:ring-white/8 dark:hover:bg-white/8"
+                  className="flex w-full min-w-0 items-center gap-3 rounded-md bg-white p-3 text-left text-sm ring-1 ring-zinc-950/8 outline-none hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 dark:bg-white/4 dark:ring-white/8 dark:hover:bg-white/8"
                 >
-                  <span className="font-mono text-sm text-zinc-500 tabular-nums dark:text-zinc-400">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="font-mono text-zinc-500 tabular-nums dark:text-zinc-400">{String(index + 1).padStart(2, '0')}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-base font-medium text-zinc-950 sm:text-sm dark:text-white">{pack.title}</span>
-                    <span className="mt-1 block truncate font-root text-sm text-zinc-500 dark:text-zinc-400">{pack.roots.slice(0, 8).map((root) => displayRootGlyph(root.root, root.code)).join(' ')}</span>
+                    <span className="block truncate font-medium text-zinc-950 dark:text-white">{pack.title}</span>
+                    <span className="mt-1 block truncate font-root text-zinc-500 dark:text-zinc-400">{pack.roots.slice(0, 8).map((root) => displayRootGlyph(root.root, root.code)).join(' ')}</span>
                   </span>
-                  <span className="text-sm text-zinc-500 tabular-nums dark:text-zinc-400">{score}%</span>
+                  <span className="text-zinc-500 tabular-nums dark:text-zinc-400">{score}%</span>
                 </button>
               </li>
             )

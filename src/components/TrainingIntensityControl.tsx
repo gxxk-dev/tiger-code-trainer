@@ -23,6 +23,7 @@ export function TrainingIntensityControl({ value, onChange, labelledBy, classNam
           key={profile.minutes}
           onClick={() => onChange(profile.minutes)}
           aria-pressed={value === profile.minutes}
+          aria-label={`${profile.label}，${profile.minutes} 分钟`}
           className={clsx(
             'min-h-11 rounded-md px-2 text-base font-medium tabular-nums outline-none focus-visible:outline-2 focus-visible:outline-brand-500 sm:min-h-9 sm:text-sm',
             value === profile.minutes
@@ -30,7 +31,10 @@ export function TrainingIntensityControl({ value, onChange, labelledBy, classNam
               : 'text-zinc-600 dark:text-zinc-400',
           )}
         >
-          {profile.label} · <span className="whitespace-nowrap">{profile.minutes} 分</span>
+          <span className="grid gap-0.5">
+            <span>{profile.label}</span>
+            <span className="whitespace-nowrap font-normal opacity-75">{profile.minutes} 分钟</span>
+          </span>
         </button>
       ))}
     </div>

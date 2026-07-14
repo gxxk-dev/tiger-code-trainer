@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   Download,
-  GitFork,
+  Code2,
   Laptop,
   Moon,
   Sun,
@@ -15,6 +15,7 @@ import { exportProgress } from '../lib/storage'
 import { settingsForIntensity } from '../lib/intensity'
 import { Button, IconButton } from './ui/Button'
 import { TrainingIntensityControl } from './TrainingIntensityControl'
+import { AppIcon } from './ui/AppIcon'
 
 interface SettingsPanelProps {
   open: boolean
@@ -47,7 +48,7 @@ export function SettingsPanel({
     if (!open) return
     const panel = panelRef.current
     const focusable = () => [...(panel?.querySelectorAll<HTMLElement>(
-      'button:not(:disabled), a[href], input:not(:disabled):not([tabindex="-1"]), select:not(:disabled), textarea:not(:disabled)',
+      'button:not(:disabled):not([tabindex="-1"]), a[href], input:not(:disabled):not([tabindex="-1"]), select:not(:disabled), textarea:not(:disabled)',
     ) ?? [])]
     const frame = window.requestAnimationFrame(() => focusable()[0]?.focus())
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -95,13 +96,11 @@ export function SettingsPanel({
 
   return (
     <div className="fixed inset-0 z-60" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <button type="button" aria-label="点击遮罩关闭设置" className="absolute inset-0 bg-zinc-950/35" onClick={onClose} />
+      <button type="button" tabIndex={-1} aria-label="点击遮罩关闭设置" className="absolute inset-0 bg-zinc-950/35" onClick={onClose} />
       <section ref={panelRef} className="absolute inset-y-0 right-0 flex w-[min(30rem,100vw)] flex-col overflow-y-auto bg-white shadow-2xl dark:bg-zinc-950 dark:shadow-none dark:ring-1 dark:ring-white/10">
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-zinc-950/8 bg-white/95 px-5 backdrop-blur dark:border-white/8 dark:bg-zinc-950/95">
           <h2 id="settings-title" className="text-lg font-semibold text-zinc-950 dark:text-white">设置</h2>
-          <IconButton label="关闭设置" onClick={onClose}>
-            <X className="size-4" aria-hidden="true" />
-          </IconButton>
+          <IconButton label="关闭设置" icon={X} onClick={onClose} />
         </header>
 
         <div className="grid gap-8 p-5">
@@ -127,7 +126,7 @@ export function SettingsPanel({
                         : 'text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white',
                     )}
                   >
-                    <Icon className="size-4 shrink-0" aria-hidden="true" />
+                    <AppIcon icon={Icon} />
                     {item.label}
                   </button>
                 )
@@ -164,10 +163,10 @@ export function SettingsPanel({
               <p className="mt-1 text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-400">进度只保存在本机。可导出后在另一浏览器恢复。</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button leadingIcon={<Download className="size-4" aria-hidden="true" />} onClick={() => exportProgress(progress)}>
+              <Button leadingIcon={Download} onClick={() => exportProgress(progress)}>
                 导出进度
               </Button>
-              <Button leadingIcon={<Upload className="size-4" aria-hidden="true" />} onClick={() => fileInputRef.current?.click()}>
+              <Button leadingIcon={Upload} onClick={() => fileInputRef.current?.click()}>
                 导入进度
               </Button>
               <input
@@ -181,7 +180,7 @@ export function SettingsPanel({
                 onChange={(event) => void restore(event.target.files?.[0])}
               />
             </div>
-            <Button variant="danger" leadingIcon={<Trash2 className="size-4" aria-hidden="true" />} onClick={reset} className="w-fit">
+            <Button variant="danger" leadingIcon={Trash2} onClick={reset} className="w-fit">
               清空学习记录
             </Button>
             <p className="min-h-6 text-base text-zinc-600 sm:text-sm dark:text-zinc-400" aria-live="polite">{message}</p>
@@ -194,17 +193,17 @@ export function SettingsPanel({
                 Copyright (C) 2026 gxxk-dev。按 GNU AGPL v3 或更高版本发布，不提供任何担保。
               </p>
               <p className="mt-2 text-base text-zinc-500 tabular-nums sm:text-sm dark:text-zinc-400">
-                版本 <BuildCommit /> · 构建于 <time dateTime={__BUILD_DATE__}>{formatBuildDate(__BUILD_DATE__)}</time>
+                版本 <BuildCommit />，构建于 <time dateTime={__BUILD_DATE__}>{formatBuildDate(__BUILD_DATE__)}</time>
               </p>
             </div>
             <a
               href="https://github.com/gxxk-dev/tiger-code-trainer"
               target="_blank"
               rel="noreferrer"
-              className="flex min-h-11 w-fit items-center gap-2 rounded-md px-2 text-base font-medium text-zinc-700 outline-none hover:bg-zinc-950/4 hover:text-zinc-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 sm:min-h-9 sm:text-sm dark:text-zinc-300 dark:hover:bg-white/6 dark:hover:text-white"
+              className="flex min-h-11 w-fit items-center gap-2 rounded-md px-2 font-medium text-zinc-700 outline-none hover:bg-zinc-950/4 hover:text-zinc-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 sm:min-h-9 dark:text-zinc-300 dark:hover:bg-white/6 dark:hover:text-white"
             >
-              <GitFork className="size-4 shrink-0" aria-hidden="true" />
-              查看源代码与许可证
+              <AppIcon icon={Code2} />
+              <p className="text-base sm:text-sm">查看源代码与许可证</p>
             </a>
           </section>
         </div>

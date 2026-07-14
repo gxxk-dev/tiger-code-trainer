@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import clsx from 'clsx'
 import { Button } from '../ui/Button'
@@ -19,7 +19,20 @@ export function FormulaTrainer({ onFinished, className }: FormulaTrainerProps) {
   const [correct, setCorrect] = useState(0)
   const [responseTimes, setResponseTimes] = useState<number[]>([])
   const startedAt = useRef(Date.now())
+  const questionHeadingRef = useRef<HTMLHeadingElement>(null)
+  const nextButtonRef = useRef<HTMLButtonElement>(null)
   const question = questions[index]
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => questionHeadingRef.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [index])
+
+  useEffect(() => {
+    if (!selected) return
+    const frame = window.requestAnimationFrame(() => nextButtonRef.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [selected])
 
   const select = (choice: string) => {
     if (selected) return
@@ -49,10 +62,10 @@ export function FormulaTrainer({ onFinished, className }: FormulaTrainerProps) {
       </div>
       <section className="grid min-h-80 content-center justify-items-center gap-8 text-center">
         <div className="flex flex-wrap justify-center gap-2" aria-label={`${question.count} 个字根`}>
-          {question.roots.map((root, rootIndex) => <span key={`${root}-${rootIndex}`} className="flex size-14 items-center justify-center rounded-md bg-white font-mono text-xl font-semibold ring-1 ring-zinc-950/10 dark:bg-white/5 dark:ring-white/10">{root}</span>)}
+          {question.roots.map((root, rootIndex) => <p key={`${root}-${rootIndex}`} className="flex size-14 items-center justify-center rounded-md bg-white font-mono text-xl font-semibold ring-1 ring-zinc-950/10 dark:bg-white/5 dark:ring-white/10">{root}</p>)}
         </div>
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-950 dark:text-white">{question.count >= 5 ? '五根及以上怎样取码？' : `${question.count} 个字根怎样取码？`}</h1>
+          <h1 ref={questionHeadingRef} tabIndex={-1} className="text-2xl font-semibold text-zinc-950 outline-none dark:text-white">{question.count >= 5 ? '五根及以上怎样取码？' : `${question.count} 个字根怎样取码？`}</h1>
           <p className="mt-2 text-base text-zinc-600 sm:text-sm dark:text-zinc-400">大写是大码，小写是末根小码。</p>
         </div>
         <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="取码选项">
@@ -64,8 +77,10 @@ export function FormulaTrainer({ onFinished, className }: FormulaTrainerProps) {
                 type="button"
                 key={choice}
                 onClick={() => select(choice)}
+                disabled={Boolean(selected)}
+                aria-pressed={selected === choice}
                 className={clsx(
-                  'min-h-12 rounded-md bg-white px-4 font-mono text-base font-semibold ring-1 ring-zinc-950/10 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 dark:bg-white/5 dark:ring-white/10',
+                  'min-h-12 rounded-md bg-white px-4 font-mono text-base font-semibold ring-1 ring-zinc-950/10 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:pointer-events-none disabled:opacity-60 dark:bg-white/5 dark:ring-white/10',
                   revealCorrect ? 'text-emerald-700 ring-emerald-500/40 dark:text-emerald-300' : '',
                   revealWrong ? 'text-red-700 ring-red-500/40 dark:text-red-300' : '',
                 )}
@@ -84,7 +99,7 @@ export function FormulaTrainer({ onFinished, className }: FormulaTrainerProps) {
           </div>
         ) : null}
       </div>
-      {selected ? <div className="flex justify-center"><Button variant="primary" trailingIcon={<ArrowRight className="size-4" aria-hidden="true" />} onClick={next}>下一题</Button></div> : null}
+      {selected ? <div className="flex justify-center"><Button ref={nextButtonRef} variant="primary" trailingIcon={ArrowRight} onClick={next}>下一题</Button></div> : null}
     </main>
   )
 }
