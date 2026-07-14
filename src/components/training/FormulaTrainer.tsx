@@ -8,10 +8,11 @@ import type { TrainingFinishedHandler } from './types'
 
 interface FormulaTrainerProps {
   onFinished: TrainingFinishedHandler
+  paused?: boolean
   className?: string
 }
 
-export function FormulaTrainer({ onFinished, className }: FormulaTrainerProps) {
+export function FormulaTrainer({ onFinished, paused = false, className }: FormulaTrainerProps) {
   const [questions] = useState(() => buildFormulaPracticeRound())
   const [index, setIndex] = useState(0)
   const [selected, setSelected] = useState('')
@@ -19,6 +20,7 @@ export function FormulaTrainer({ onFinished, className }: FormulaTrainerProps) {
   const [correct, setCorrect] = useState(0)
   const [responseTimes, setResponseTimes] = useState<number[]>([])
   const startedAt = useRef(Date.now())
+  const pausedAt = useRef<number | null>(null)
   const questionHeadingRef = useRef<HTMLHeadingElement>(null)
   const nextButtonRef = useRef<HTMLButtonElement>(null)
   const question = questions[index]
@@ -33,6 +35,14 @@ export function FormulaTrainer({ onFinished, className }: FormulaTrainerProps) {
     const frame = window.requestAnimationFrame(() => nextButtonRef.current?.focus())
     return () => window.cancelAnimationFrame(frame)
   }, [selected])
+
+  useEffect(() => {
+    if (paused && pausedAt.current === null) pausedAt.current = Date.now()
+    if (!paused && pausedAt.current !== null) {
+      startedAt.current += Date.now() - pausedAt.current
+      pausedAt.current = null
+    }
+  }, [paused])
 
   const select = (choice: string) => {
     if (selected) return

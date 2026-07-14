@@ -2,10 +2,12 @@ import { characters } from '../data/characters.generated'
 import { orderedRoots, splitExamples } from '../data/curriculum'
 import type { ProgressState, TrainingRequest } from '../types'
 import { characterId, rootId, shortcutId, splitId } from './items'
+import { hasSuccessfulRecall } from './mastery'
 import { hasCompletedStage } from './stages'
 
 const FORMULA_LESSON_ID = 'lesson:formula'
 const SHORTCUT_LESSON_PREFIX = 'lesson:shortcut:'
+export const SPLIT_RULES_LESSON_ID = 'lesson:split-rules'
 
 export function shortcutLessonId(itemId: string): string {
   return `${SHORTCUT_LESSON_PREFIX}${itemId}`
@@ -32,8 +34,8 @@ export function lessonIdsForRequest(request: TrainingRequest, progress: Progress
     : requestedIds
   return lessonIds.filter((id) => {
     if (!progress.learned[id]) return true
-    if (request.stageId === 'shortcuts') return !progress.mastery[shortcutId(sourceItemId(id))]
-    return !progress.mastery[sourceItemId(id)]
+    if (request.stageId === 'shortcuts') return !hasSuccessfulRecall(progress.mastery[shortcutId(sourceItemId(id))])
+    return !hasSuccessfulRecall(progress.mastery[sourceItemId(id)])
   })
 }
 
@@ -41,6 +43,14 @@ export function sourceItemId(lessonId: string): string {
   return lessonId.startsWith(SHORTCUT_LESSON_PREFIX)
     ? lessonId.slice(SHORTCUT_LESSON_PREFIX.length)
     : lessonId
+}
+
+export function practiceItemIdsForLesson(lessonIds: string[]): string[] {
+  return lessonIds.flatMap((id) => {
+    if (id.startsWith(SHORTCUT_LESSON_PREFIX)) return [sourceItemId(id)]
+    if (id.startsWith('lesson:')) return []
+    return [id]
+  })
 }
 
 export function shouldShowLesson(request: TrainingRequest, progress: ProgressState): boolean {

@@ -4,11 +4,8 @@ import clsx from 'clsx'
 import {
   articles,
   basicStrokes,
-  orderedRoots,
   ruleLabels,
-  splitExamples,
 } from '../../data/curriculum'
-import { requiredSplits } from '../../data/splits.generated'
 import {
   displayRootGlyph,
   resolveCharacter,
@@ -16,13 +13,13 @@ import {
   resolveSplit,
   rootId,
 } from '../../lib/items'
-import { lessonIdsForRequest, sourceItemId } from '../../lib/lessons'
-import { getRootMemoryHint } from '../../lib/rootHints'
-import { splitUsesAnyRoot, splitUsesOnlyRoots } from '../../lib/splitEncoding'
-import type { ProgressState, RootEntry, SplitEntry, TrainingRequest } from '../../types'
+import { lessonIdsForRequest, sourceItemId, SPLIT_RULES_LESSON_ID } from '../../lib/lessons'
+import { rootExampleCharacters } from '../../lib/rootExamples'
+import type { ProgressState, SplitEntry, TrainingRequest } from '../../types'
 import { AppIcon } from '../ui/AppIcon'
 import { Button } from '../ui/Button'
-import { MemoryHint } from './MemoryHint'
+import { RootExampleProcess } from './RootExampleProcess'
+import { SplitBasics, SplitBasicsDisclosure } from './SplitBasics'
 import { SplitEncodingProcess } from './SplitEncodingProcess'
 
 interface LessonPrimerProps {
@@ -38,7 +35,6 @@ interface LessonItem {
   label: string
   code: string
   detail: string
-  hint?: string
   variants?: string
   examples?: string[]
   split?: SplitEntry
@@ -61,13 +57,20 @@ export function LessonPrimer({ request, progress, onComplete }: LessonPrimerProp
 
   const items = buildLessonItems(lessonIds, request)
   if (request.kind === 'splits') {
-    return <SplitLesson items={items} headingRef={headingRef} onComplete={() => onComplete(lessonIds.slice(0, 1))} />
+    const showBasics = !progress.learned[SPLIT_RULES_LESSON_ID]
+    return <SplitLesson
+      items={items}
+      headingRef={headingRef}
+      showBasics={showBasics}
+      onComplete={() => onComplete([
+        ...lessonIds.slice(0, 1),
+        ...(showBasics ? [SPLIT_RULES_LESSON_ID] : []),
+      ])}
+    />
   }
   return <CodeLesson
     items={items}
     headingRef={headingRef}
-    knownRoots={orderedRoots.filter((root) => progress.learned[rootId(root)] || progress.mastery[rootId(root)])}
-    showRootApplication={request.stageId !== 'strokes'}
     onComplete={() => onComplete(lessonIds)}
   />
 }
@@ -75,23 +78,20 @@ export function LessonPrimer({ request, progress, onComplete }: LessonPrimerProp
 function CodeLesson({
   items,
   headingRef,
-  knownRoots,
-  showRootApplication,
   onComplete,
 }: {
   items: LessonItem[]
   headingRef: React.RefObject<HTMLHeadingElement | null>
-  knownRoots: RootEntry[]
-  showRootApplication: boolean
   onComplete: () => void
 }) {
   const [phase, setPhase] = useState<'look' | 'copy'>('look')
   const [index, setIndex] = useState(0)
   const [value, setValue] = useState('')
+  const [guidedHits, setGuidedHits] = useState(0)
+  const [copyError, setCopyError] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const item = items[index]
   const isRootLesson = items.every((lessonItem) => lessonItem.kind === 'root')
-  const applicationSplit = isRootLesson && showRootApplication ? findApplicationSplit(items, knownRoots) : undefined
 
   useEffect(() => {
     if (phase === 'copy') inputRef.current?.focus()
@@ -105,12 +105,12 @@ function CodeLesson({
         <header className="max-w-2xl">
           <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">第 1 步 / 3：认识</p>
           <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl font-semibold text-balance text-zinc-950 outline-none dark:text-white">
-            {isRootLesson ? '先认识完整字根和根码' : '先看答案，不测试'}
+            {isRootLesson ? '先看字形、根码和例字' : '先看答案，不测试'}
           </h1>
           <p className="mt-3 max-w-[58ch] text-base text-pretty text-zinc-600 dark:text-zinc-400">
             {isRootLesson
-              ? `这轮只学 ${items.length} 个拆字零件。卡片左边的大字就是完整字根，不是待拆汉字；现在记它自己的两字母根码。`
-              : `这轮只学 ${items.length} 个。把字形、编码和学习联想一起看一遍；联想不是额外规则，现在也不用背熟。`}
+              ? `这轮只学 ${items.length} 个拆字零件。先看每个字根怎样出现在例字里，然后直接把它的两键练成反射。`
+              : `这轮只学 ${items.length} 个。先把字形和编码一起看一遍，下一步会保持答案可见。`}
           </p>
         </header>
 
@@ -118,24 +118,14 @@ function CodeLesson({
           <div role="note" aria-label="字根说明" className="border-y border-zinc-950/8 py-4 dark:border-white/8">
             <p className="font-medium text-zinc-950 dark:text-white">完整字根不再往下拆。</p>
             <p className="mt-1 max-w-[62ch] text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">
-              这里输入的不是字根字形，而是它的字母码：先按大码，再按小码。遇到完整汉字时，才把整字拆成这些字根并套取码公式。
+              例字只是告诉你这个零件会出现在哪些整字里。训练时看字根，先按大码，再按小码，不需要编故事或背联想。
             </p>
           </div>
         ) : null}
 
-        {applicationSplit ? (
-          <section aria-labelledby="root-application-title" className="grid gap-4 border-y border-zinc-950/8 py-5 dark:border-white/8">
-            <div>
-              <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">马上用进一个整字</p>
-              <h2 id="root-application-title" className="mt-1 text-xl font-semibold text-balance text-zinc-950 dark:text-white">看一遍完整拆字过程</h2>
-            </div>
-            <SplitEncodingProcess split={applicationSplit} />
-          </section>
-        ) : null}
-
         <div className="flex flex-wrap gap-2">
           <Button variant="primary" leadingIcon={Keyboard} onClick={() => setPhase('copy')}>
-            {isRootLesson ? '跟着根码打一次' : '跟着答案打一次'}
+            {isRootLesson ? '开始两轮跟打' : '跟着答案打一次'}
           </Button>
           <Button variant="ghost" size="compact" leadingIcon={SkipForward} onClick={onComplete}>我已经会了，直接练习</Button>
         </div>
@@ -155,15 +145,12 @@ function CodeLesson({
                       {' → '}输入 <span className="font-mono font-semibold text-zinc-950 dark:text-white">{lessonItem.code}</span>
                     </p>
                     {visibleVariants(lessonItem.variants).length ? <p className="font-root">常见变形：{visibleVariants(lessonItem.variants).join(' ')}</p> : null}
-                    {lessonItem.examples?.length ? <p className="font-root">可在这些字里找它：{lessonItem.examples.join('、')}</p> : null}
+                    {lessonItem.examples?.length ? <p className="font-root">例字：{lessonItem.examples.join('、')}</p> : null}
                     <p>{lessonItem.detail}</p>
                   </div>
                 ) : (
                   <p className="mt-2 text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">{lessonItem.detail}</p>
                 )}
-                {lessonItem.hint ? (
-                  <MemoryHint text={lessonItem.hint} className="mt-3 border-t border-zinc-950/8 pt-3 dark:border-white/8" />
-                ) : null}
               </div>
             </li>
           ))}
@@ -172,7 +159,8 @@ function CodeLesson({
     )
   }
 
-  const copied = value === item.code
+  const requiredHits = item.kind === 'root' ? 2 : 1
+  const copied = guidedHits >= requiredHits
   const advance = () => {
     if (!copied) return
     if (index + 1 >= items.length) {
@@ -181,17 +169,21 @@ function CodeLesson({
     }
     setIndex((current) => current + 1)
     setValue('')
+    setGuidedHits(0)
+    setCopyError(false)
   }
+
+  const root = item.kind === 'root' ? resolveRoot(sourceItemId(item.id)) : undefined
 
   return (
     <main className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-3xl content-center gap-8 px-4 py-10 sm:px-6 lg:px-8">
       <header>
-        <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">第 2 步 / 3：跟打 {index + 1} / {items.length}</p>
+        <p className="font-mono text-sm font-medium text-brand-700 tabular-nums dark:text-brand-300">第 2 步 / 3：高频跟打 {index + 1} / {items.length}</p>
         <h1 ref={headingRef} tabIndex={-1} className="mt-2 text-3xl font-semibold text-balance text-zinc-950 outline-none dark:text-white">
-          {item.kind === 'root' ? '完整字根不再拆，照着输入根码' : '答案一直显示，照着输入'}
+          {item.kind === 'root' ? '看着字根，把两键连续敲对两次' : '答案一直显示，照着输入'}
         </h1>
-        <p className="mt-3 text-base text-zinc-600 dark:text-zinc-400">
-          {item.kind === 'root' ? '先大码、后小码。跟打不计分，最后一步才会遮住答案。' : '跟打不计分。最后一步才会遮住答案。'}
+        <p className="mt-3 max-w-[58ch] text-base text-pretty text-zinc-600 dark:text-zinc-400">
+          {item.kind === 'root' ? '答案保持显示。每次都按相同顺序敲完大码和小码，完成后才会打乱顺序盲打。' : '跟打不计分。最后一步才会遮住答案。'}
         </p>
       </header>
 
@@ -216,17 +208,31 @@ function CodeLesson({
             ))}
           </div>
         )}
-        {item.hint ? (
-          <MemoryHint text={item.hint} className="max-w-lg text-left" />
-        ) : null}
+        {root ? <RootExampleProcess root={root} /> : null}
         <label className="grid w-full max-w-xs gap-2 text-left text-base font-medium text-zinc-700 sm:text-sm dark:text-zinc-300">
-          照着输入 {item.code}
+          {item.kind === 'root' ? `照着输入 ${item.code}，第 ${Math.min(guidedHits + 1, requiredHits)} / ${requiredHits} 次` : `照着输入 ${item.code}`}
           <input
             ref={inputRef}
             type="text"
             name="guided-code-answer"
             value={value}
-            onChange={(event) => setValue(event.target.value.toLowerCase().replace(/[^a-z]/g, '').slice(0, item.code.length))}
+            onChange={(event) => {
+              const nextValue = event.target.value.toLowerCase().replace(/[^a-z]/g, '').slice(0, item.code.length)
+              if (nextValue !== item.code) {
+                if (nextValue.length === item.code.length) {
+                  setValue('')
+                  setGuidedHits(0)
+                  setCopyError(true)
+                } else {
+                  setValue(nextValue)
+                }
+                return
+              }
+              const nextHits = guidedHits + 1
+              setCopyError(false)
+              setGuidedHits(nextHits)
+              setValue(nextHits >= requiredHits ? nextValue : '')
+            }}
             onKeyDown={(event) => {
               if (event.key === 'Enter') advance()
             }}
@@ -234,6 +240,7 @@ function CodeLesson({
             autoCorrect="off"
             autoComplete="off"
             spellCheck={false}
+            readOnly={copied}
             aria-label={`照着答案输入“${displayRootGlyph(item.glyph)}”的编码`}
             className={clsx(
               'min-h-12 rounded-md bg-white px-3 text-center font-mono text-xl font-semibold text-zinc-950 ring-1 outline-none focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-brand-500 dark:bg-white/5 dark:text-white',
@@ -242,13 +249,17 @@ function CodeLesson({
           />
         </label>
         <p className="min-h-6 text-base text-zinc-600 dark:text-zinc-300" aria-live="polite">
-          {copied ? <span className="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-300"><AppIcon icon={Check} />对，就是这几个键</span> : null}
+          {copied
+            ? <span className="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-300"><AppIcon icon={Check} />两次正确，手指已经走过这条路径</span>
+            : copyError
+              ? <span className="text-red-700 dark:text-red-300">顺序不对，重新连续敲对两次。</span>
+              : guidedHits ? '第 1 次完成，再敲一次相同根码。' : null}
         </p>
       </section>
 
       <div className="flex justify-center">
         <Button variant="primary" disabled={!copied} trailingIcon={ArrowRight} onClick={advance}>
-          {index + 1 >= items.length ? '遮住答案，开始练习' : '下一个'}
+          {index + 1 >= items.length ? '打乱顺序，开始两轮盲打' : '下一个字根'}
         </Button>
       </div>
     </main>
@@ -288,7 +299,17 @@ function FormulaLesson({ headingRef, onComplete }: { headingRef: React.RefObject
   )
 }
 
-function SplitLesson({ items, headingRef, onComplete }: { items: LessonItem[]; headingRef: React.RefObject<HTMLHeadingElement | null>; onComplete: () => void }) {
+function SplitLesson({
+  items,
+  headingRef,
+  showBasics,
+  onComplete,
+}: {
+  items: LessonItem[]
+  headingRef: React.RefObject<HTMLHeadingElement | null>
+  showBasics: boolean
+  onComplete: () => void
+}) {
   return (
     <main className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-4xl content-center gap-8 px-4 py-10 sm:px-6 lg:px-8">
       <header className="max-w-2xl">
@@ -298,6 +319,7 @@ function SplitLesson({ items, headingRef, onComplete }: { items: LessonItem[]; h
           一次只学一个字：先拆成有顺序的字根，再查每根的两字母根码，最后套取码公式。看完后只练这个字，不需要输入字根字形。
         </p>
       </header>
+      {showBasics ? <SplitBasics /> : <SplitBasicsDisclosure />}
       <ul role="list" className="border-y border-zinc-950/8 dark:border-white/8">
         {items.slice(0, 1).map((item) => (
           <li key={item.id} className="py-5">
@@ -336,17 +358,15 @@ function buildLessonItems(itemIds: string[], request: TrainingRequest): LessonIt
     const root = resolveRoot(sourceId)
     if (root) {
       const stroke = basicStrokes.find((candidate) => rootId(candidate.entry) === sourceId)
-      const hint = getRootMemoryHint(root)
       return [{
         id,
         kind: 'root',
         glyph: root.root,
         label: stroke ? `基本笔画：${stroke.name}` : '完整字根，不再拆',
         code: root.code,
-        detail: hint.compactCue,
-        hint: hint.mnemonic,
+        detail: `先按大码 ${root.code[0].toUpperCase()}，再按小码 ${root.code[1]}。`,
         variants: root.variants,
-        examples: root.examples,
+        examples: rootExampleCharacters(root).slice(0, 5),
       }]
     }
     const character = resolveCharacter(sourceId)
@@ -378,22 +398,6 @@ function buildLessonItems(itemIds: string[], request: TrainingRequest): LessonIt
     }
     return []
   })
-}
-
-function findApplicationSplit(items: LessonItem[], previouslyLearnedRoots: RootEntry[]): SplitEntry | undefined {
-  const currentRoots = items.flatMap((item) => resolveRoot(sourceItemId(item.id)) ?? [])
-  const knownRoots = [...previouslyLearnedRoots, ...currentRoots]
-  const preferred = new Map(['休', '扣', '什', '百', '么'].map((char, index) => [char, index]))
-  const candidates = [...splitExamples, ...requiredSplits]
-    .filter((split) => split.roots.length >= 2 && split.roots.length <= 3)
-    .filter((split) => splitUsesOnlyRoots(split, knownRoots))
-  const applicable = candidates.filter((split) => splitUsesAnyRoot(split, currentRoots))
-  return (applicable.length ? applicable : candidates)
-    .sort((left, right) => {
-      const leftPriority = preferred.get(left.char) ?? 999
-      const rightPriority = preferred.get(right.char) ?? 999
-      return leftPriority - rightPriority || left.roots.length - right.roots.length
-    })[0]
 }
 
 function visibleVariants(variants?: string): string[] {

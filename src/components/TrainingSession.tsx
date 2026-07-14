@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Pause, Play, X } from 'lucide-react'
 import { median } from '../lib/mastery'
-import { lessonIdsForRequest } from '../lib/lessons'
+import { lessonIdsForRequest, practiceItemIdsForLesson } from '../lib/lessons'
 import type { ProgressState, SessionRecord, TrainingRequest } from '../types'
 import { ArticleTrainer } from './training/ArticleTrainer'
 import { CodeTrainer } from './training/CodeTrainer'
@@ -41,6 +41,9 @@ export function TrainingSession({
   const introducedCount = useRef(0)
   const learningItemCount = useRef(0)
   const practicedItemIds = useRef(request.itemIds ?? [])
+  const practiceRef = useRef<HTMLDivElement>(null)
+  const pausedAt = useRef<number | null>(null)
+  const pausedDuration = useRef(0)
   const [learning, setLearning] = useState(() => initialLessonIds.current.length > 0)
   const [practiceItemIds, setPracticeItemIds] = useState(request.itemIds)
   const sessionStartedAt = useRef(Date.now())
@@ -76,16 +79,17 @@ export function TrainingSession({
     setResult(summary)
   }
 
-  const elapsed = () => Math.max(1, Math.round((Date.now() - sessionStartedAt.current) / 1000))
+  const elapsed = () => Math.max(1, Math.round((Date.now() - sessionStartedAt.current - pausedDuration.current) / 1000))
 
   const beginPractice = (itemIds: string[]) => {
+    const practiceIds = practiceItemIdsForLesson(itemIds)
     introducedCount.current = request.kind === 'article' || request.kind === 'formula'
       ? 0
       : itemIds.filter((id) => newLessonIds.current.has(id)).length
-    learningItemCount.current = request.kind === 'article' || request.kind === 'formula' ? 0 : itemIds.length
-    practicedItemIds.current = itemIds
+    learningItemCount.current = request.kind === 'article' || request.kind === 'formula' ? 0 : practiceIds.length
+    practicedItemIds.current = practiceIds
     onLearned(itemIds)
-    if (request.kind === 'splits') setPracticeItemIds(itemIds)
+    if (request.kind === 'splits') setPracticeItemIds(practiceIds)
     sessionStartedAt.current = Date.now()
     setLearning(false)
   }
@@ -93,6 +97,24 @@ export function TrainingSession({
   const practiceRequest = request.kind === 'splits'
     ? { ...request, itemIds: practiceItemIds }
     : request
+
+  const resumePractice = () => {
+    if (pausedAt.current !== null) {
+      pausedDuration.current += Date.now() - pausedAt.current
+      pausedAt.current = null
+    }
+    setPaused(false)
+    window.requestAnimationFrame(() => {
+      practiceRef.current
+        ?.querySelector<HTMLElement>('input:not([readonly]), textarea:not([readonly]), [tabindex="-1"], button:not([disabled])')
+        ?.focus()
+    })
+  }
+
+  const pausePractice = () => {
+    pausedAt.current = Date.now()
+    setPaused(true)
+  }
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-canvas text-zinc-950 dark:bg-canvas-dark dark:text-zinc-100" role="dialog" aria-modal="true" aria-labelledby="training-title">
@@ -104,21 +126,13 @@ export function TrainingSession({
             <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">{learning ? '先学，答案可见' : modeLabel(request.kind)}</p>
           </div>
           {!result && !learning ? (
-            <IconButton label={paused ? '继续训练' : '暂停训练'} icon={paused ? Play : Pause} onClick={() => setPaused((value) => !value)} />
+            <IconButton label={paused ? '继续训练' : '暂停训练'} icon={paused ? Play : Pause} onClick={paused ? resumePractice : pausePractice} />
           ) : null}
         </div>
       </header>
 
       {learning ? (
         <LessonPrimer request={request} progress={progress} onComplete={beginPractice} />
-      ) : paused ? (
-        <div className="grid min-h-[calc(100dvh-4rem)] place-items-center px-4" role="status">
-          <div className="grid justify-items-center gap-4 text-center">
-            <AppIcon icon={Pause} inline={false} className="stroke-zinc-500" />
-            <h1 className="text-2xl font-semibold text-zinc-950 dark:text-white">训练已暂停</h1>
-            <Button variant="primary" leadingIcon={Play} onClick={() => setPaused(false)}>继续</Button>
-          </div>
-        </div>
       ) : result ? (
         <CompletionView
           request={request}
@@ -127,14 +141,29 @@ export function TrainingSession({
           onContinue={onContinue}
           continueLabel={continueLabel}
         />
-      ) : request.kind === 'article' ? (
-        <ArticleTrainer request={request} onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} />
-      ) : request.kind === 'formula' ? (
-        <FormulaTrainer onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} />
-      ) : request.kind === 'splits' ? (
-        <SplitTrainer request={practiceRequest} onAnswer={onAnswer} onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} />
       ) : (
-        <CodeTrainer request={request} progress={progress} onAnswer={onAnswer} onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} />
+        <>
+          <div ref={practiceRef} className={paused ? 'hidden' : undefined} aria-hidden={paused || undefined}>
+            {request.kind === 'article' ? (
+              <ArticleTrainer request={request} onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} paused={paused} />
+            ) : request.kind === 'formula' ? (
+              <FormulaTrainer onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} paused={paused} />
+            ) : request.kind === 'splits' ? (
+              <SplitTrainer request={practiceRequest} onAnswer={onAnswer} onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} paused={paused} />
+            ) : (
+              <CodeTrainer request={request} progress={progress} onAnswer={onAnswer} onFinished={(summary) => finish({ ...summary, durationSeconds: elapsed() })} paused={paused} />
+            )}
+          </div>
+          {paused ? (
+            <div className="grid min-h-[calc(100dvh-4rem)] place-items-center px-4" role="status">
+              <div className="grid justify-items-center gap-4 text-center">
+                <AppIcon icon={Pause} inline={false} className="stroke-zinc-500" />
+                <h1 className="text-2xl font-semibold text-zinc-950 dark:text-white">训练已暂停</h1>
+                <Button variant="primary" leadingIcon={Play} onClick={resumePractice}>继续</Button>
+              </div>
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   )

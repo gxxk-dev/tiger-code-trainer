@@ -6,7 +6,7 @@ import { characters } from '../data/characters.generated'
 import { articles, basicStrokes, courseStages, orderedRoots, rootPacks, splitExamples } from '../data/curriculum'
 import { requiredSplits } from '../data/splits.generated'
 import { characterId, displayRootGlyph, rootId, shortcutId, splitId } from '../lib/items'
-import { masteryPercent } from '../lib/mastery'
+import { hasSuccessfulRecall, masteryPercent } from '../lib/mastery'
 import { shouldShowLesson } from '../lib/lessons'
 import { hasCompletedStage as hasPersistedStage } from '../lib/stages'
 import type { CourseStage, ProgressState, TrainingRequest } from '../types'
@@ -91,7 +91,7 @@ export function CourseView({ progress, onStart }: CourseViewProps) {
                 <button
                   type="button"
                   onClick={() => {
-                    const unseen = pack.roots.filter((root) => !progress.mastery[rootId(root)])
+                    const unseen = pack.roots.filter((root) => !hasSuccessfulRecall(progress.mastery[rootId(root)]))
                     const selected = (unseen.length ? unseen : pack.roots).slice(0, progress.settings.newItemsPerRound)
                     onStart({ kind: 'roots', title: pack.title, stageId: 'roots', itemIds: selected.map(rootId) })
                   }}
@@ -126,14 +126,14 @@ function requestForStage(stage: CourseStage, progress: ProgressState): TrainingR
     case 'formula':
       return { kind: 'formula', title: stage.title, stageId: stage.id }
     case 'roots': {
-      const pack = rootPacks.find((candidate) => candidate.roots.some((root) => !progress.mastery[rootId(root)])) ?? rootPacks[0]
-      const unseen = pack.roots.filter((root) => !progress.mastery[rootId(root)])
+      const pack = rootPacks.find((candidate) => candidate.roots.some((root) => !hasSuccessfulRecall(progress.mastery[rootId(root)]))) ?? rootPacks[0]
+      const unseen = pack.roots.filter((root) => !hasSuccessfulRecall(progress.mastery[rootId(root)]))
       const selected = (unseen.length ? unseen : pack.roots).slice(0, count)
       return { kind: 'roots', title: pack.title, stageId: stage.id, itemIds: selected.map(rootId) }
     }
     case 'splits':
       const unseen = [...splitExamples, ...requiredSplits.filter((entry) => !splitExamples.some((example) => example.char === entry.char))]
-        .filter((entry) => !progress.mastery[splitId(entry)])
+        .filter((entry) => !hasSuccessfulRecall(progress.mastery[splitId(entry)]))
       const selected = (unseen.length ? unseen : splitExamples).slice(0, Math.max(8, count))
       return {
         kind: 'splits',
@@ -143,19 +143,19 @@ function requestForStage(stage: CourseStage, progress: ProgressState): TrainingR
       }
     case 'first-500': {
       const pool = characters.filter((item) => item.band === 1)
-      const unseen = pool.filter((item) => !progress.mastery[characterId(item)])
+      const unseen = pool.filter((item) => !hasSuccessfulRecall(progress.mastery[characterId(item)]))
       return { kind: 'characters', title: stage.title, stageId: stage.id, itemIds: (unseen.length ? unseen : pool).slice(0, count + 4).map(characterId) }
     }
     case 'shortcuts': {
       const pool = characters.filter((item) => item.short)
-      const unseen = pool.filter((item) => !progress.mastery[shortcutId(item)])
+      const unseen = pool.filter((item) => !hasSuccessfulRecall(progress.mastery[shortcutId(item)]))
       return { kind: 'characters', title: stage.title, stageId: stage.id, itemIds: (unseen.length ? unseen : pool).slice(0, count + 4).map(characterId) }
     }
     case 'phrases':
       return { kind: 'article', title: stage.title, stageId: stage.id, articleId: articles[0].id }
     case 'later-1000': {
       const pool = characters.filter((item) => item.band !== 1)
-      const unseen = pool.filter((item) => !progress.mastery[characterId(item)])
+      const unseen = pool.filter((item) => !hasSuccessfulRecall(progress.mastery[characterId(item)]))
       return { kind: 'characters', title: stage.title, stageId: stage.id, itemIds: (unseen.length ? unseen : pool).slice(0, count + 4).map(characterId) }
     }
     case 'fluency':

@@ -28,8 +28,12 @@ export function updateMastery(
     ? responseMs
     : Math.round((base.averageMs * base.attempts + responseMs) / attempts)
   const recalled = isCorrect && !usedHint
+  const canIncreaseLevel = recalled
+    && base.streak >= 1
+    && base.lastSeenAt > 0
+    && !isSameLocalDay(base.lastSeenAt, now)
   const nextLevel = recalled
-    ? Math.min(base.level + (base.streak >= 1 ? 1 : 0), REVIEW_INTERVALS.length - 1)
+    ? Math.min(base.level + (canIncreaseLevel ? 1 : 0), REVIEW_INTERVALS.length - 1)
     : Math.max(0, base.level - 1)
 
   return {
@@ -42,6 +46,10 @@ export function updateMastery(
     lastSeenAt: now,
     dueAt: recalled ? now + REVIEW_INTERVALS[nextLevel] : now,
   }
+}
+
+export function hasSuccessfulRecall(record: MasteryRecord | undefined): boolean {
+  return Boolean(record?.correct)
 }
 
 export function masteryPercent(record: MasteryRecord | undefined): number {
@@ -69,4 +77,12 @@ export function calculateAccuracy(expected: string, actual: string): number {
     if (expectedChars[index] === actualChars[index]) matches += 1
   }
   return Math.round((matches / Math.max(expectedChars.length, actualChars.length, 1)) * 100)
+}
+
+function isSameLocalDay(left: number, right: number): boolean {
+  const leftDate = new Date(left)
+  const rightDate = new Date(right)
+  return leftDate.getFullYear() === rightDate.getFullYear()
+    && leftDate.getMonth() === rightDate.getMonth()
+    && leftDate.getDate() === rightDate.getDate()
 }

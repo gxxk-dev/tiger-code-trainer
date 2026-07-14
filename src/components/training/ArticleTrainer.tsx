@@ -10,16 +10,18 @@ import type { TrainingFinishedHandler } from './types'
 interface ArticleTrainerProps {
   request: TrainingRequest
   onFinished: TrainingFinishedHandler
+  paused?: boolean
   className?: string
 }
 
-export function ArticleTrainer({ request, onFinished, className }: ArticleTrainerProps) {
+export function ArticleTrainer({ request, onFinished, paused = false, className }: ArticleTrainerProps) {
   const article = articles.find((item) => item.id === request.articleId) ?? articles[0]
   const [value, setValue] = useState('')
   const [startedAt, setStartedAt] = useState(0)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [backspaces, setBackspaces] = useState(0)
   const [composing, setComposing] = useState(false)
+  const pausedAt = useRef<number | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -27,13 +29,24 @@ export function ArticleTrainer({ request, onFinished, className }: ArticleTraine
   }, [])
 
   useEffect(() => {
-    if (!startedAt) return
+    if (!startedAt || paused) return
     const interval = window.setInterval(() => setElapsedSeconds(Math.max(1, Math.round((Date.now() - startedAt) / 1000))), 500)
     return () => window.clearInterval(interval)
-  }, [startedAt])
+  }, [paused, startedAt])
+
+  useEffect(() => {
+    if (paused && pausedAt.current === null) pausedAt.current = Date.now()
+    if (!paused && pausedAt.current !== null) {
+      const pauseDuration = Date.now() - pausedAt.current
+      setStartedAt((value) => value ? value + pauseDuration : value)
+      pausedAt.current = null
+    }
+  }, [paused])
 
   const accuracy = calculateAccuracy(article.text, value)
-  const cpm = startedAt ? Math.round(Array.from(value).length / Math.max(1, (Date.now() - startedAt) / 60_000)) : 0
+  const currentPauseDuration = pausedAt.current === null ? 0 : Date.now() - pausedAt.current
+  const activeElapsedMs = startedAt ? Date.now() - startedAt - currentPauseDuration : 0
+  const cpm = startedAt ? Math.round(Array.from(value).length / Math.max(1, activeElapsedMs / 60_000)) : 0
 
   const finish = () => {
     const expected = Array.from(article.text)

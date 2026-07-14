@@ -3,7 +3,7 @@ import { basicStrokes } from '../data/curriculum'
 import { characters } from '../data/characters.generated'
 import { createInitialProgress } from './storage'
 import { characterId, dueItemIds, getItemLabel, rootId, shortcutId } from './items'
-import { lessonIdsForRequest, shortcutLessonId, shouldShowLesson } from './lessons'
+import { lessonIdsForRequest, practiceItemIdsForLesson, shortcutLessonId, shouldShowLesson, SPLIT_RULES_LESSON_ID } from './lessons'
 import { updateMastery } from './mastery'
 
 describe('learn before practice routing', () => {
@@ -43,6 +43,16 @@ describe('learn before practice routing', () => {
     expect(shouldShowLesson(request, progress)).toBe(false)
   })
 
+  it('repeats root teaching after a failed attempt', () => {
+    const progress = createInitialProgress()
+    const id = rootId(basicStrokes[0].entry)
+    const request = { kind: 'roots' as const, title: '基本笔画', itemIds: [id] }
+    progress.learned[id] = 1000
+    progress.mastery[id] = updateMastery(undefined, false, 1200, false, 2000)
+
+    expect(lessonIdsForRequest(request, progress)).toEqual([id])
+  })
+
   it('never inserts lessons before due review', () => {
     const progress = createInitialProgress()
     const id = rootId(basicStrokes[0].entry)
@@ -62,6 +72,18 @@ describe('learn before practice routing', () => {
     expect(shouldShowLesson(request, progress)).toBe(true)
     progress.mastery[shortcutId(itemId)] = updateMastery(undefined, true, 800, false, 3000)
     expect(shouldShowLesson(request, progress)).toBe(false)
+  })
+
+  it('keeps shortcut items while removing lesson-only markers from practice records', () => {
+    const character = characters.find((item) => item.short)!
+    const itemId = characterId(character)
+
+    expect(practiceItemIdsForLesson([
+      shortcutLessonId(itemId),
+      SPLIT_RULES_LESSON_ID,
+      'lesson:formula',
+      itemId,
+    ])).toEqual([itemId, itemId])
   })
 
   it('queues an incorrect shortcut as a distinct review item', () => {

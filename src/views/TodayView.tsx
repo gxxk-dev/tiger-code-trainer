@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { basicStrokes } from '../data/curriculum'
 import { buildDailyPlan, buildDeepDiveRequest, type DailyStep } from '../lib/dailyPlan'
-import { getRootMemoryHint } from '../lib/rootHints'
+import { rootExampleCharacters } from '../lib/rootExamples'
 import type { AppSettings, ProgressState, TrainingRequest } from '../types'
 
 interface TodayViewProps {
@@ -182,7 +182,7 @@ function FirstLessonView({ onStart, onSkip }: { onStart: () => void; onSkip: () 
       <header className="grid gap-6 border-b border-zinc-950/8 pb-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-end dark:border-white/8">
         <div className="min-w-0">
           <p className="font-mono text-sm font-medium text-brand-700 dark:text-brand-300">从零开始，第 1 课，约 3 分钟</p>
-          <h1 className="mt-2 max-w-[18ch] text-3xl font-semibold text-balance text-zinc-950 sm:text-4xl dark:text-white">先看答案，不会也能开始</h1>
+          <h1 className="mt-2 max-w-[18ch] text-3xl font-semibold text-balance text-zinc-950 sm:text-4xl dark:text-white">先看字形，再把两键练成反射</h1>
           <div className="mt-4 grid max-w-[58ch] gap-1 text-base text-pretty text-zinc-600 dark:text-zinc-300">
             <p>汉字会拆成字根。</p>
             <p>每个字根固定对应两个字母：第一个叫大码，第二个叫小码。</p>
@@ -196,19 +196,19 @@ function FirstLessonView({ onStart, onSkip }: { onStart: () => void; onSkip: () 
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <section aria-labelledby="memory-title">
-          <p className="font-mono text-sm font-medium text-blue-700 dark:text-blue-300">唯一需要背的内容</p>
-          <h2 id="memory-title" className="mt-2 text-xl font-semibold text-zinc-950 dark:text-white">这一课只记 5 个基本笔画</h2>
-          <p className="mt-2 max-w-[58ch] text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-400">下面是临时学习联想，不是额外编码规则；哪个有用就留哪个。</p>
+          <p className="font-mono text-sm font-medium text-blue-700 dark:text-blue-300">不用联想也能完成</p>
+          <h2 id="memory-title" className="mt-2 text-xl font-semibold text-zinc-950 dark:text-white">这一课先练 5 个基本笔画</h2>
+          <p className="mt-2 max-w-[58ch] text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-400">例字只用来展示这个字根会藏在哪个整字里。进入训练后，每组看着答案敲两次，再打乱顺序盲打两轮。</p>
           <ul role="list" className="mt-5 divide-y divide-zinc-950/8 border-y border-zinc-950/8 dark:divide-white/8 dark:border-white/8">
             {basicStrokes.map((stroke) => {
-              const hint = getRootMemoryHint(stroke.entry)
+              const examples = rootExampleCharacters(stroke.entry).slice(0, 4)
               return (
                 <li key={stroke.code} className="grid grid-cols-[3.5rem_3rem_minmax(0,1fr)] items-start gap-3 py-4 sm:grid-cols-[3.5rem_4rem_minmax(0,1fr)] sm:gap-4">
                   <p className="pt-1 text-base font-medium text-zinc-700 dark:text-zinc-200">{stroke.name}</p>
                   <p className="font-root text-3xl font-medium text-zinc-950 dark:text-white">{stroke.glyph}</p>
                   <div className="min-w-0">
                     <p className="font-mono text-2xl font-semibold text-brand-700 dark:text-brand-300">{stroke.code}</p>
-                    <p className="mt-1 text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">{hint.mnemonic}</p>
+                    {examples.length ? <p className="mt-1 font-root text-base text-pretty text-zinc-600 sm:text-sm dark:text-zinc-300">例字：{examples.join('、')}</p> : null}
                   </div>
                 </li>
               )
@@ -220,9 +220,9 @@ function FirstLessonView({ onStart, onSkip }: { onStart: () => void; onSkip: () 
         <aside aria-labelledby="lesson-steps-title" className="border-t border-zinc-950/8 pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-7 dark:border-white/8">
           <h2 id="lesson-steps-title" className="font-semibold text-zinc-950 dark:text-white">接下来只做三步</h2>
           <ol role="list" className="mt-4 grid gap-5">
-            <FirstLessonStep index="01" title="看答案" detail="先把上面五组看一遍" />
-            <FirstLessonStep index="02" title="照着打" detail="答案保持显示，不计分" />
-            <FirstLessonStep index="03" title="自己回忆" detail="最后才遮住答案练习" />
+            <FirstLessonStep index="01" title="认字形与例字" detail="看清要练的是哪个字根" />
+            <FirstLessonStep index="02" title="连续跟打两次" detail="答案保持显示，不计分" />
+            <FirstLessonStep index="03" title="交错盲打两轮" detail="错后立即重敲并稍后重测" />
           </ol>
           <div className="mt-7 border-t border-zinc-950/8 pt-5 dark:border-white/8">
             <p className="text-base text-zinc-500 sm:text-sm dark:text-zinc-400">现在不用管：完整字根表、拆字规则、简码和速度。</p>

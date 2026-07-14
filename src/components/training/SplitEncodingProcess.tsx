@@ -58,6 +58,7 @@ export function SplitEncodingProcess({ split, className, showReason = true }: Sp
       {showReason ? (
         <p className="border-t border-zinc-950/8 pt-3 text-base text-pretty text-zinc-600 sm:text-sm dark:border-white/8 dark:text-zinc-300">
           <span className="font-medium text-zinc-950 dark:text-white">{split.rule ? ruleLabels[split.rule] : '按书写顺序'}：</span>
+          {split.rule === 'cut' ? '切字用于离析糅合度较高的字根，需要把一整笔想象剪开。' : ''}
           {split.note.replace(/^重试：/, '').replace(/^字根码：.*$/, '按上面的字根顺序取码。')}
         </p>
       ) : null}

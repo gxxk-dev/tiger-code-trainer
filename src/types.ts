@@ -42,7 +42,7 @@ export interface SplitEntry {
   rootCodes?: string[]
   code: string
   note: string
-  rule?: 'order' | 'frame' | 'cut' | 'walk' | 'shape'
+  rule?: 'order' | 'frame' | 'cut' | 'walk' | 'shape' | 'box'
 }
 
 export interface ArticleEntry {

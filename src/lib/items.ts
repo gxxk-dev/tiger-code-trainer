@@ -2,6 +2,7 @@ import { characters } from '../data/characters.generated'
 import { orderedRoots, splitExamples } from '../data/curriculum'
 import { requiredSplits } from '../data/splits.generated'
 import type { CharacterEntry, ProgressState, RootEntry, SplitEntry } from '../types'
+import { hasSuccessfulRecall } from './mastery'
 
 export function rootId(root: RootEntry): string {
   return `root:${root.code}:${root.root}`
@@ -53,7 +54,7 @@ export function isResolvableItemId(id: string): boolean {
 export function newRootIds(progress: ProgressState, count: number): string[] {
   return orderedRoots
     .map(rootId)
-    .filter((id) => !progress.mastery[id])
+    .filter((id) => !hasSuccessfulRecall(progress.mastery[id]))
     .slice(0, count)
 }
 
@@ -65,7 +66,7 @@ export function newCharacterIds(
   return characters
     .filter((character) => character.band === band)
     .map(characterId)
-    .filter((id) => !progress.mastery[id])
+    .filter((id) => !hasSuccessfulRecall(progress.mastery[id]))
     .slice(0, count)
 }
 

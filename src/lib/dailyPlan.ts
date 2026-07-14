@@ -11,6 +11,7 @@ import type {
 import { getIntensityProfile, type IntensityProfile } from './intensity'
 import { characterId, dueItemIds, isResolvableItemId, rootId, shortcutId, splitId } from './items'
 import { shortcutLessonId } from './lessons'
+import { hasSuccessfulRecall } from './mastery'
 import { splitUsesOnlyRoots } from './splitEncoding'
 import { hasCompletedStage } from './stages'
 
@@ -245,10 +246,10 @@ function nextCurriculumRequest(progress: ProgressState, count: number): { stage:
   if (count <= 0) return undefined
 
   const rootCandidates = orderedRoots.filter((root) => !basicStrokeIds.has(rootId(root)))
-  const pendingRoots = rootCandidates.filter((root) => progress.learned[rootId(root)] && !progress.mastery[rootId(root)])
+  const pendingRoots = rootCandidates.filter((root) => progress.learned[rootId(root)] && !hasSuccessfulRecall(progress.mastery[rootId(root)]))
   const roots = (pendingRoots.length
     ? pendingRoots
-    : rootCandidates.filter((root) => !progress.mastery[rootId(root)]))
+    : rootCandidates.filter((root) => !hasSuccessfulRecall(progress.mastery[rootId(root)])))
     .slice(0, count)
   if (roots.length) {
     return {
@@ -257,10 +258,10 @@ function nextCurriculumRequest(progress: ProgressState, count: number): { stage:
     }
   }
 
-  const pendingSplits = splitPool.filter((split) => progress.learned[splitId(split)] && !progress.mastery[splitId(split)])
+  const pendingSplits = splitPool.filter((split) => progress.learned[splitId(split)] && !hasSuccessfulRecall(progress.mastery[splitId(split)]))
   const splits = (pendingSplits.length
     ? pendingSplits
-    : splitPool.filter((split) => !progress.mastery[splitId(split)]))
+    : splitPool.filter((split) => !hasSuccessfulRecall(progress.mastery[splitId(split)])))
     .slice(0, count)
   if (splits.length) {
     return {
@@ -270,10 +271,10 @@ function nextCurriculumRequest(progress: ProgressState, count: number): { stage:
   }
 
   const firstPool = characters.filter((character) => character.band === 1)
-  const pendingFirstCharacters = firstPool.filter((character) => progress.learned[characterId(character)] && !progress.mastery[characterId(character)])
+  const pendingFirstCharacters = firstPool.filter((character) => progress.learned[characterId(character)] && !hasSuccessfulRecall(progress.mastery[characterId(character)]))
   const firstCharacters = (pendingFirstCharacters.length
     ? pendingFirstCharacters
-    : firstPool.filter((character) => !progress.mastery[characterId(character)]))
+    : firstPool.filter((character) => !hasSuccessfulRecall(progress.mastery[characterId(character)])))
     .slice(0, count)
   if (firstCharacters.length) {
     return {
@@ -285,11 +286,11 @@ function nextCurriculumRequest(progress: ProgressState, count: number): { stage:
   const shortcutPool = characters.slice(0, 500).filter((character) => character.short)
   const pendingShortcuts = shortcutPool.filter((character) => {
     const id = characterId(character)
-    return progress.learned[shortcutLessonId(id)] && !progress.mastery[shortcutId(character)]
+    return progress.learned[shortcutLessonId(id)] && !hasSuccessfulRecall(progress.mastery[shortcutId(character)])
   })
   const shortcuts = (pendingShortcuts.length
     ? pendingShortcuts
-    : shortcutPool.filter((character) => !progress.mastery[shortcutId(character)]))
+    : shortcutPool.filter((character) => !hasSuccessfulRecall(progress.mastery[shortcutId(character)])))
     .slice(0, count)
   if (shortcuts.length) {
     return {
@@ -306,10 +307,10 @@ function nextCurriculumRequest(progress: ProgressState, count: number): { stage:
   }
 
   const laterPool = characters.filter((character) => character.band !== 1)
-  const pendingLaterCharacters = laterPool.filter((character) => progress.learned[characterId(character)] && !progress.mastery[characterId(character)])
+  const pendingLaterCharacters = laterPool.filter((character) => progress.learned[characterId(character)] && !hasSuccessfulRecall(progress.mastery[characterId(character)]))
   const laterCharacters = (pendingLaterCharacters.length
     ? pendingLaterCharacters
-    : laterPool.filter((character) => !progress.mastery[characterId(character)]))
+    : laterPool.filter((character) => !hasSuccessfulRecall(progress.mastery[characterId(character)])))
     .slice(0, count)
   if (laterCharacters.length) {
     return {
@@ -335,7 +336,7 @@ function applicationRequest(
     return { kind: 'article', title: '把编码用进真实短句', stageId: 'phrases', articleId: articles[0].id }
   }
 
-  const knownRoots = orderedRoots.filter((root) => progress.learned[rootId(root)] || progress.mastery[rootId(root)])
+  const knownRoots = orderedRoots.filter((root) => progress.learned[rootId(root)] || hasSuccessfulRecall(progress.mastery[rootId(root)]))
   const preferred = new Map(['休', '扣', '什', '百', '么', '仕', '刁', '壬', '与'].map((char, index) => [char, index]))
   const knownCandidates = splitPool
     .filter((split) => split.roots.length >= 2 && split.roots.length <= 3)
@@ -345,7 +346,7 @@ function applicationRequest(
       const rightPriority = preferred.get(right.char) ?? 999
       return leftPriority - rightPriority || left.roots.length - right.roots.length
     })
-  const unseen = knownCandidates.filter((split) => !progress.mastery[splitId(split)])
+  const unseen = knownCandidates.filter((split) => !hasSuccessfulRecall(progress.mastery[splitId(split)]))
   const practicedSplits = new Set(learnedItemIds.filter((id) => id.startsWith('split:')))
   const practicedToday = knownCandidates.filter((split) => practicedSplits.has(splitId(split)))
   const introducedToday = knownCandidates.filter((split) => (progress.learned[splitId(split)] ?? 0) >= dayStart)
@@ -362,24 +363,24 @@ function curriculumPosition(progress: ProgressState): CurriculumPosition {
   if (!progress.onboardingComplete) return position(courseStages[0], 0, 1)
   if (!hasCompletedStage(progress, 'formula')) return position(courseStages[1], 0, 1)
 
-  const rootCompleted = orderedRoots.filter((root) => basicStrokeIds.has(rootId(root)) || progress.mastery[rootId(root)]).length
+  const rootCompleted = orderedRoots.filter((root) => basicStrokeIds.has(rootId(root)) || hasSuccessfulRecall(progress.mastery[rootId(root)])).length
   if (rootCompleted < orderedRoots.length) return position(courseStages[2], rootCompleted, orderedRoots.length)
 
-  const splitCompleted = splitPool.filter((split) => progress.mastery[splitId(split)]).length
+  const splitCompleted = splitPool.filter((split) => hasSuccessfulRecall(progress.mastery[splitId(split)])).length
   if (splitCompleted < splitPool.length) return position(courseStages[3], splitCompleted, splitPool.length)
 
   const firstPool = characters.filter((character) => character.band === 1)
-  const firstCompleted = firstPool.filter((character) => progress.mastery[characterId(character)]).length
+  const firstCompleted = firstPool.filter((character) => hasSuccessfulRecall(progress.mastery[characterId(character)])).length
   if (firstCompleted < firstPool.length) return position(courseStages[4], firstCompleted, firstPool.length)
 
   const shortcutPool = characters.slice(0, 500).filter((character) => character.short)
-  const shortcutCompleted = shortcutPool.filter((character) => progress.mastery[shortcutId(character)]).length
+  const shortcutCompleted = shortcutPool.filter((character) => hasSuccessfulRecall(progress.mastery[shortcutId(character)])).length
   if (shortcutCompleted < shortcutPool.length) return position(courseStages[5], shortcutCompleted, shortcutPool.length)
 
   if (!hasCompletedStage(progress, 'phrases')) return position(courseStages[6], 0, 1)
 
   const laterPool = characters.filter((character) => character.band !== 1)
-  const laterCompleted = laterPool.filter((character) => progress.mastery[characterId(character)]).length
+  const laterCompleted = laterPool.filter((character) => hasSuccessfulRecall(progress.mastery[characterId(character)])).length
   if (laterCompleted < laterPool.length) return position(courseStages[7], laterCompleted, laterPool.length)
 
   return position(courseStages[8], hasCompletedStage(progress, 'fluency') ? 1 : 0, 1)

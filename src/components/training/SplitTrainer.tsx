@@ -15,10 +15,11 @@ interface SplitTrainerProps {
   request: TrainingRequest
   onAnswer: TrainingAnswerHandler
   onFinished: TrainingFinishedHandler
+  paused?: boolean
   className?: string
 }
 
-export function SplitTrainer({ request, onAnswer, onFinished, className }: SplitTrainerProps) {
+export function SplitTrainer({ request, onAnswer, onFinished, paused = false, className }: SplitTrainerProps) {
   const pool = useMemo(() => [...splitExamples, ...requiredSplits.filter((entry) => !splitExamples.some((example) => example.char === entry.char))], [])
   const initial = request.itemIds?.flatMap((id) => resolveSplit(id) ?? []) ?? pool.slice(0, 10)
   const [queue, setQueue] = useState(initial)
@@ -30,6 +31,7 @@ export function SplitTrainer({ request, onAnswer, onFinished, className }: Split
   const [firstTryCorrect, setFirstTryCorrect] = useState(0)
   const [responseTimes, setResponseTimes] = useState<number[]>([])
   const startedAt = useRef(Date.now())
+  const pausedAt = useRef<number | null>(null)
   const questionHeadingRef = useRef<HTMLHeadingElement>(null)
   const nextButtonRef = useRef<HTMLButtonElement>(null)
   const question = queue[index]
@@ -49,6 +51,14 @@ export function SplitTrainer({ request, onAnswer, onFinished, className }: Split
     const frame = window.requestAnimationFrame(() => nextButtonRef.current?.focus())
     return () => window.cancelAnimationFrame(frame)
   }, [selected])
+
+  useEffect(() => {
+    if (paused && pausedAt.current === null) pausedAt.current = Date.now()
+    if (!paused && pausedAt.current !== null) {
+      startedAt.current += Date.now() - pausedAt.current
+      pausedAt.current = null
+    }
+  }, [paused])
 
   const choose = (char: string, usedHint = false) => {
     if (!question || selected) return

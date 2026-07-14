@@ -74,6 +74,20 @@ describe('daily training planner', () => {
     expect(application.nextRequest?.itemIds?.length).toBeLessThanOrEqual(3)
   })
 
+  it('does not skip a learned root that only has failed attempts', () => {
+    const progress = readyProgress()
+    const firstRoot = orderedRoots.find((root) => !['fi', 'gs', 'tp', 'id', 'ae'].includes(root.code))!
+    const id = rootId(firstRoot)
+    progress.learned[id] = now - 60_000
+    progress.mastery[id] = {
+      ...mastery(now),
+      correct: 0,
+      lapses: 1,
+    }
+
+    expect(buildDailyPlan(progress, now).nextRequest?.itemIds?.[0]).toBe(id)
+  })
+
   it('reduces tomorrow new content after an extra learning load', () => {
     const progress = readyProgress()
     const dueIds = orderedRoots.slice(0, 19).map(rootId)
