@@ -96,8 +96,10 @@ describe('paused training time', () => {
     rerender(<SplitTrainer request={request} onAnswer={onAnswer} onFinished={onFinished} paused={false} />)
 
     now = 63_000
-    const choices = screen.getByRole('group', { name: '为“柯”选择拆分' })
-    fireEvent.click(within(choices).getByRole('button', { name: /木.*可/ }))
+    const choices = screen.getByRole('group', { name: '为“柯”按顺序选择字根' })
+    fireEvent.click(within(choices).getByRole('button', { name: /木/ }))
+    fireEvent.click(within(choices).getByRole('button', { name: /可/ }))
+    fireEvent.click(screen.getByRole('button', { name: '提交拆分' }))
 
     expect(onAnswer).toHaveBeenCalledWith(splitId(split), true, 2_000, false)
   })
